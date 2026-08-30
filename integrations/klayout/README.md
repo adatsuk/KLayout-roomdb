@@ -81,6 +81,14 @@ Direct `.core` open (after rebuild):
 C:\path\to\KLayout\bin-release\klayout.exe examples\gds_to_core\output\sample.core
 ```
 
+## Layout XOR with CORE (LibMan)
+
+LibMan’s **XOR… / XOR with …** batch script (`klayout -b -r`) calls `Layout.read()` on both operands. With **mcore** installed in that same `klayout.exe`, operands may be `*.layout.core` as well as GDS/OAS/LStream.
+
+The result GDS contains cell **COMPARE** (master + `XOR_DIFF` overlay). Opening the log link in LibMan selects **COMPARE** so both are visible in one window.
+
+If XOR fails on `.core` with a read error, confirm Tool Manager → Layout points at the KLayout build that includes `mcore.dll` (not a stock install without the streamer).
+
 KLayout smoke tests (from repo root, with `klayout -b` on `PATH`):
 
 ```bat
