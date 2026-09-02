@@ -47,26 +47,26 @@ jobs:
       - name: Build KLayout + mcore
         run: |
           sed -i 's/\r$//' KLayout-coredb/scripts/ci_build_klayout_mcore.sh
-          bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "${{ github.workspace }}"
+          bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "$GITHUB_WORKSPACE"
 
       - name: Smoke test CORE load
         env:
-          COMMONDB_ROOT: ${{ github.workspace }}/CommonDB
-          KLAYOUT: ${{ github.workspace }}/KLayout-coredb/klayout-src/bin-release/klayout
+          COMMONDB_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB
+          KLAYOUT: ${{ env.GITHUB_WORKSPACE }}/KLayout-coredb/klayout-src/bin-release/klayout
         run: |
           CORE_PATH="$COMMONDB_ROOT/examples/gds_to_core/output/sample.core"
           if [[ ! -f "$CORE_PATH" ]]; then
             echo "Skip smoke test: $CORE_PATH not in CommonDB checkout"
             exit 0
           fi
-          "$KLAYOUT" -b -r "${{ github.workspace }}/KLayout-coredb/scripts/test_core_load.rb"
+          "$KLAYOUT" -b -r "$GITHUB_WORKSPACE/KLayout-coredb/scripts/test_core_load.rb"
 
       - name: Install linuxdeployqt
         run: bash KLayout-coredb/scripts/ci_install_linuxdeployqt.sh
 
       - name: Package portable bundle
         env:
-          CAPNP_ROOT: ${{ github.workspace }}/CommonDB/third_party/capnp-install-linux
+          CAPNP_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB/third_party/capnp-install-linux
         run: |
           bash KLayout-coredb/scripts/package_klayout_linux_bundle.sh \
             KLayout-coredb/klayout-src/bin-release \
