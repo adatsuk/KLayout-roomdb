@@ -45,7 +45,9 @@ jobs:
             capnp-linux-rocky8-v1-
 
       - name: Build KLayout + mcore
-        run: bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "${{ github.workspace }}"
+        run: |
+          sed -i 's/\r$//' KLayout-coredb/scripts/ci_build_klayout_mcore.sh
+          bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "${{ github.workspace }}"
 
       - name: Smoke test CORE load
         env:
@@ -109,7 +111,9 @@ jobs:
             capnp-linux-ubuntu24-v1-
 
       - name: Build KLayout + mcore
-        run: bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "${{ github.workspace }}"
+        run: |
+          sed -i 's/\r$//' KLayout-coredb/scripts/ci_build_klayout_mcore.sh
+          bash KLayout-coredb/scripts/ci_build_klayout_mcore.sh "${{ github.workspace }}"
 
       - name: Smoke test CORE load
         env:
