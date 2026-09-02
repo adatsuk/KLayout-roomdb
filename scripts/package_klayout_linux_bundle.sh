@@ -32,8 +32,8 @@ export LD_LIBRARY_PATH="${STAGE}/lib:${LD_LIBRARY_PATH:-}"
 
 if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins' "$STAGE/klayout" || true
-    if [[ -f "$STAGE/db_plugins/mcore.so" ]]; then
-        patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$STAGE/db_plugins/mcore.so" || true
+    if [[ -f "$STAGE/db_plugins/libmcore.so" ]]; then
+        patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$STAGE/db_plugins/libmcore.so" || true
     fi
 fi
 

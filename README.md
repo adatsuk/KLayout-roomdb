@@ -2,7 +2,7 @@
 
 [KLayout](https://github.com/KLayout/klayout) workspace with [CORE](https://github.com/IHP-GmbH/CommonDB) (CommonDB) **mcore** streamer: open and save `.core` / `*.layout.core` layout files directly in KLayout — no GDS round-trip for viewing.
 
-Vendored KLayout tree under `klayout-src/` plus `integrations/klayout/mcore` plugin sources (compiled into `db_plugins/mcore.dll`).
+Vendored KLayout tree under `klayout-src/` plus `integrations/klayout/mcore` plugin sources (compiled into `db_plugins/libmcore.so` on Linux).
 
 ## Layout
 
@@ -64,7 +64,7 @@ Layout views use `dbuPerMicron` in CORE. LibMan expects `cell.layout.core` namin
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yaml`) builds on **Rocky Linux 8** (RHEL 8 compatible): checks out CommonDB, links `mcore`, runs `build.sh` (no Ruby/Python bindings), verifies `mcore` plugin and `klayout` binary.
+GitHub Actions (`.github/workflows/ci.yaml`) builds on **Rocky Linux 8** and **Ubuntu 24.04**: checks out CommonDB, links `mcore`, runs `build.sh` (no Ruby/Python bindings), verifies `libmcore.so` and packages portable tarballs (`klayout-rocky8`, `klayout-linux-ubuntu24` artifacts).
 
 ## Upstream
 
