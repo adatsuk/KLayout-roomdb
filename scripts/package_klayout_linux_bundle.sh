@@ -28,7 +28,12 @@ if [[ -n "$CAPNP_ROOT" && -d "$CAPNP_ROOT/lib" ]]; then
 fi
 
 QMAKE="$(command -v qmake-qt5 2>/dev/null || command -v qmake)"
-export LD_LIBRARY_PATH="${STAGE}/lib:${LD_LIBRARY_PATH:-}"
+DEPLOY_LDPATH="${STAGE}:${STAGE}/db_plugins:${STAGE}/lay_plugins"
+if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+    DEPLOY_LDPATH="${DEPLOY_LDPATH}:${LD_LIBRARY_PATH}"
+fi
+DEPLOY_LDPATH="${DEPLOY_LDPATH}:/usr/lib64:/lib64:/usr/lib/x86_64-linux-gnu"
+export LD_LIBRARY_PATH="${STAGE}/lib:${DEPLOY_LDPATH}"
 
 if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins' "$STAGE/klayout" || true
@@ -37,19 +42,36 @@ if command -v patchelf >/dev/null 2>&1; then
     fi
 fi
 
-if command -v linuxdeployqt >/dev/null 2>&1; then
-    linuxdeployqt "$STAGE/klayout" -qmake="$QMAKE" -bundle-non-qt-libs -always-overwrite
-else
-    echo "WARNING: linuxdeployqt not found; copying dependencies via ldd."
+bundle_ldd() {
+    echo "Bundling Qt/runtime dependencies via ldd."
     mkdir -p "$STAGE/lib"
-    while IFS= read -r lib; do
-        [[ -n "$lib" && -f "$lib" ]] || continue
-        cp -Ln "$lib" "$STAGE/lib/" 2>/dev/null || cp -L "$lib" "$STAGE/lib/" || true
-    done < <(ldd "$STAGE/klayout" | awk '/=>/ {print $3}' | grep -vE '^/(lib|usr/lib)' || true)
+    copy_deps() {
+        local bin="$1"
+        while IFS= read -r lib; do
+            [[ -n "$lib" && -f "$lib" ]] || continue
+            cp -Ln "$lib" "$STAGE/lib/" 2>/dev/null || cp -L "$lib" "$STAGE/lib/" || true
+        done < <(ldd "$bin" | awk '/=>/ {print $3}' | grep -vE '^/(lib|usr/lib)' || true)
+    }
+    copy_deps "$STAGE/klayout"
+    if [[ -f "$STAGE/db_plugins/libmcore.so" ]]; then
+        copy_deps "$STAGE/db_plugins/libmcore.so"
+    fi
     QT_PLUGINS="$(qmake -query QT_INSTALL_PLUGINS 2>/dev/null || true)"
     if [[ -n "$QT_PLUGINS" && -d "$QT_PLUGINS" ]]; then
         cp -a "$QT_PLUGINS" "$STAGE/"
     fi
+}
+
+if [[ "${BUNDLE_SKIP_LINUXDEPLOYQT:-}" == "1" ]]; then
+    bundle_ldd
+elif command -v linuxdeployqt >/dev/null 2>&1; then
+    if ! linuxdeployqt "$STAGE/klayout" -qmake="$QMAKE" -bundle-non-qt-libs -always-overwrite; then
+        echo "linuxdeployqt failed; falling back to ldd bundling." >&2
+        bundle_ldd
+    fi
+else
+    echo "WARNING: linuxdeployqt not found; copying dependencies via ldd."
+    bundle_ldd
 fi
 
 cp -a "$STAGE"/. "$DIST/"

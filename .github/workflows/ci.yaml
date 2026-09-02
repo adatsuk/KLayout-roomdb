@@ -67,6 +67,7 @@ jobs:
       - name: Package portable bundle
         env:
           CAPNP_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB/third_party/capnp-install-linux
+          BUNDLE_SKIP_LINUXDEPLOYQT: "1"
         run: |
           bash KLayout-coredb/scripts/package_klayout_linux_bundle.sh \
             KLayout-coredb/klayout-src/bin-release \
@@ -133,6 +134,7 @@ jobs:
       - name: Package Ubuntu 24 bundle
         env:
           CAPNP_ROOT: ${{ github.workspace }}/CommonDB/third_party/capnp-install-linux
+          BUNDLE_SKIP_LINUXDEPLOYQT: "1"
         run: |
           bash KLayout-coredb/scripts/package_klayout_linux_bundle.sh \
             KLayout-coredb/klayout-src/bin-release \
