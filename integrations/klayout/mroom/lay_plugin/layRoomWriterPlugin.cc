@@ -1,7 +1,7 @@
-#include "coreFormat.h"
-#include "coreWriter.h"
+#include "roomFormat.h"
+#include "roomWriter.h"
 #include "dbSaveLayoutOptions.h"
-#include "layCoreWriterPlugin.h"
+#include "layRoomWriterPlugin.h"
 
 #include "tlClassRegistry.h"
 
@@ -13,7 +13,7 @@ class CoreWriterPluginDeclaration
 {
 public:
   CoreWriterPluginDeclaration ()
-    : StreamWriterPluginDeclaration (coredb::WriterOptions ().format_name ())
+    : StreamWriterPluginDeclaration (roomdb::WriterOptions ().format_name ())
   {
   }
 
@@ -24,11 +24,11 @@ public:
 
   db::FormatSpecificWriterOptions *create_specific_options () const override
   {
-    return new coredb::WriterOptions ();
+    return new roomdb::WriterOptions ();
   }
 };
 
 static tl::RegisteredClass<lay::PluginDeclaration>
-  plugin_decl (new CoreWriterPluginDeclaration (), 10000, "COREWriter");
+  plugin_decl (new CoreWriterPluginDeclaration (), 10000, "ROOMWriter");
 
 }

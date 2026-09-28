@@ -1,5 +1,5 @@
 
-TARGET = mcore
+TARGET = mroom
 DESTDIR = $$OUT_PWD/../../../../db_plugins
 
 exists($$PWD/local.pri) {
@@ -12,18 +12,18 @@ isEmpty(KLAYOUT_SRC) {
 
 include($$KLAYOUT_SRC/plugins/db_plugin.pri)
 
-include($$PWD/../core.pri)
+include($$PWD/../room.pri)
 
 HEADERS += \
-  corePlugin.h \
-  coreReader.h \
-  coreWriter.h \
-  coreFormat.h \
+  roomPlugin.h \
+  roomReader.h \
+  roomWriter.h \
+  roomFormat.h \
   propertyBridge.h
 
 SOURCES += \
-  corePlugin.cc \
-  coreReader.cc \
-  coreWriter.cc \
-  coreFormat.cc \
+  roomPlugin.cc \
+  roomReader.cc \
+  roomWriter.cc \
+  roomFormat.cc \
   propertyBridge.cc

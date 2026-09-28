@@ -1,10 +1,10 @@
-#ifndef HDR_coreWriter
-#define HDR_coreWriter
+#ifndef HDR_roomWriter
+#define HDR_roomWriter
 
 #include "dbPluginCommon.h"
 #include "dbWriter.h"
 
-namespace coredb
+namespace roomdb
 {
 
 class DB_PLUGIN_PUBLIC Writer

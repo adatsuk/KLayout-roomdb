@@ -1,4 +1,4 @@
-#include "coreReader.h"
+#include "roomReader.h"
 #include "propertyBridge.h"
 
 #include "database.h"
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace coredb
+namespace roomdb
 {
 
 namespace {
@@ -39,28 +39,28 @@ db::Coord cast_coord (std::int64_t value)
   return db::Coord (value);
 }
 
-db::Point make_point (const core::Point &point)
+db::Point make_point (const room::Point &point)
 {
   return db::Point (cast_coord (point.x), cast_coord (point.y));
 }
 
-db::Box make_box (const core::Box &box)
+db::Box make_box (const room::Box &box)
 {
   return db::Box (make_point ({box.llx, box.lly}), make_point ({box.urx, box.ury}));
 }
 
-db::ICplxTrans make_transform (const core::Transform &transform)
+db::ICplxTrans make_transform (const room::Transform &transform)
 {
   db::FTrans rot (db::FTrans::r0);
   switch (transform.orient) {
-  case core::Orient::R0: rot = db::FTrans (db::FTrans::r0); break;
-  case core::Orient::R90: rot = db::FTrans (db::FTrans::r90); break;
-  case core::Orient::R180: rot = db::FTrans (db::FTrans::r180); break;
-  case core::Orient::R270: rot = db::FTrans (db::FTrans::r270); break;
-  case core::Orient::MY: rot = db::FTrans (db::FTrans::m0); break;
-  case core::Orient::MX: rot = db::FTrans (db::FTrans::m90); break;
-  case core::Orient::MX90: rot = db::FTrans (db::FTrans::m135); break;
-  case core::Orient::MY90: rot = db::FTrans (db::FTrans::m45); break;
+  case room::Orient::R0: rot = db::FTrans (db::FTrans::r0); break;
+  case room::Orient::R90: rot = db::FTrans (db::FTrans::r90); break;
+  case room::Orient::R180: rot = db::FTrans (db::FTrans::r180); break;
+  case room::Orient::R270: rot = db::FTrans (db::FTrans::r270); break;
+  case room::Orient::MY: rot = db::FTrans (db::FTrans::m0); break;
+  case room::Orient::MX: rot = db::FTrans (db::FTrans::m90); break;
+  case room::Orient::MX90: rot = db::FTrans (db::FTrans::m135); break;
+  case room::Orient::MY90: rot = db::FTrans (db::FTrans::m45); break;
   }
 
   db::ICplxTrans result = db::ICplxTrans (rot, db::Vector (cast_coord (transform.x), cast_coord (transform.y)));
@@ -78,7 +78,7 @@ public:
   {
   }
 
-  unsigned int layer_index (const core::LayerSpec &spec)
+  unsigned int layer_index (const room::LayerSpec &spec)
   {
     const LayerKey key { spec.layerNum, spec.dataType };
     const auto it = m_map.find (key);
@@ -126,8 +126,8 @@ void insert_shape (db::Shapes &shapes, const Obj &obj, db::properties_id_type pr
   }
 }
 
-void apply_core_properties (db::Cell &cell, const std::vector<core::Property> &cell_props,
-                            const std::vector<core::Property> &content_props)
+void apply_core_properties (db::Cell &cell, const std::vector<room::Property> &cell_props,
+                            const std::vector<room::Property> &content_props)
 {
   db::PropertiesSet property_set;
   if (! cell_props.empty ()) {
@@ -172,24 +172,24 @@ void Reader::do_read (db::Layout &layout)
 {
   const std::string path = m_stream.absolute_file_path ();
   if (path.empty ()) {
-    throw tl::Exception (tl::to_string (tr ("CORE reader requires a file path")));
+    throw tl::Exception (tl::to_string (tr ("ROOM reader requires a file path")));
   }
 
-  core::Database database;
+  room::Database database;
   try {
-    database = core::Database::loadFromFile (path);
+    database = room::Database::loadFromFile (path);
   } catch (const std::exception &ex) {
-    throw tl::Exception (tl::to_string (tr ("Failed to load CORE file: ")) + ex.what ());
+    throw tl::Exception (tl::to_string (tr ("Failed to load ROOM file: ")) + ex.what ());
   }
 
-  const core::Lib &lib = database.lib ();
+  const room::Lib &lib = database.lib ();
   if (lib.cells ().empty ()) {
     return;
   }
 
   double dbu_per_micron = 1000.0;
-  for (const core::Cell &cell : lib.cells ()) {
-    if (const core::CellContent *content = cell.findContent (core::ViewType::Layout)) {
+  for (const room::Cell &cell : lib.cells ()) {
+    if (const room::CellContent *content = cell.findContent (room::ViewType::Layout)) {
       if (content->dbuPerMicron () > 0.0) {
         dbu_per_micron = content->dbuPerMicron ();
         break;
@@ -208,24 +208,24 @@ void Reader::do_read (db::Layout &layout)
   }
 
   std::map<std::string, db::cell_index_type> cell_index_by_name;
-  for (const core::Cell &cell : lib.cells ()) {
+  for (const room::Cell &cell : lib.cells ()) {
     cell_index_by_name[cell.name ()] = layout.add_cell (cell.name ().c_str ());
   }
 
   LayerMapper layer_mapper (layout);
 
-  for (const core::Cell &cell : lib.cells ()) {
-    const core::CellContent *content = cell.findContent (core::ViewType::Layout);
+  for (const room::Cell &cell : lib.cells ()) {
+    const room::CellContent *content = cell.findContent (room::ViewType::Layout);
     if (content == nullptr) {
       continue;
     }
 
-    const std::vector<core::LayerSpec> view_layers = core::resolveViewLayers (*content, lib);
-    auto layer_spec_by_id = [&view_layers](std::uint32_t layerId) -> core::LayerSpec {
+    const std::vector<room::LayerSpec> view_layers = room::resolveViewLayers (*content, lib);
+    auto layer_spec_by_id = [&view_layers](std::uint32_t layerId) -> room::LayerSpec {
       if (layerId < view_layers.size ()) {
         return view_layers[layerId];
       }
-      core::LayerSpec fallback;
+      room::LayerSpec fallback;
       fallback.layerNum = 0;
       fallback.dataType = 0;
       fallback.name = "unknown";
@@ -234,24 +234,24 @@ void Reader::do_read (db::Layout &layout)
 
     db::Cell &target_cell = layout.cell (cell_index_by_name.at (cell.name ()));
     apply_core_properties (target_cell, cell.properties (), content->properties ());
-    const core::Block &block = content->block ();
+    const room::Block &block = content->block ();
 
-    for (const core::Shape &shape : block.shapes ()) {
+    for (const room::Shape &shape : block.shapes ()) {
       const db::properties_id_type prop_id = properties_id_from_core (shape.properties ());
       switch (shape.type ()) {
-      case core::Shape::Type::Rect: {
-        if (const core::Shape::RectData *rect = shape.rect ()) {
+      case room::Shape::Type::Rect: {
+        if (const room::Shape::RectData *rect = shape.rect ()) {
           const unsigned int li = layer_mapper.layer_index (layer_spec_by_id (rect->layerId));
           insert_shape (target_cell.shapes (li), make_box (rect->box), prop_id);
         }
         break;
       }
-      case core::Shape::Type::Polygon: {
-        if (const core::Shape::PolygonData *polygon = shape.polygon ()) {
+      case room::Shape::Type::Polygon: {
+        if (const room::Shape::PolygonData *polygon = shape.polygon ()) {
           const unsigned int li = layer_mapper.layer_index (layer_spec_by_id (polygon->layerId));
           std::vector<db::Point> hull;
           hull.reserve (polygon->points.size ());
-          for (const core::Point &point : polygon->points) {
+          for (const room::Point &point : polygon->points) {
             hull.push_back (make_point (point));
           }
           if (! hull.empty ()) {
@@ -262,15 +262,15 @@ void Reader::do_read (db::Layout &layout)
         }
         break;
       }
-      case core::Shape::Type::Path: {
-        if (const core::Shape::PathData *path = shape.path ()) {
+      case room::Shape::Type::Path: {
+        if (const room::Shape::PathData *path = shape.path ()) {
           if (path->points.empty ()) {
             break;
           }
           const unsigned int li = layer_mapper.layer_index (layer_spec_by_id (path->layerId));
           std::vector<db::Point> path_points;
           path_points.reserve (path->points.size ());
-          for (const core::Point &point : path->points) {
+          for (const room::Point &point : path->points) {
             path_points.push_back (make_point (point));
           }
           db::Path db_path;
@@ -282,8 +282,8 @@ void Reader::do_read (db::Layout &layout)
         }
         break;
       }
-      case core::Shape::Type::Text: {
-        if (const core::Shape::TextData *text = shape.text ()) {
+      case room::Shape::Type::Text: {
+        if (const room::Shape::TextData *text = shape.text ()) {
           const unsigned int li = layer_mapper.layer_index (layer_spec_by_id (text->layerId));
           const db::Point position = make_point (text->position);
           db::Text label (text->text, db::Trans (db::Vector (position)));
@@ -297,7 +297,7 @@ void Reader::do_read (db::Layout &layout)
       }
     }
 
-    for (const core::Instance &instance : block.instances ()) {
+    for (const room::Instance &instance : block.instances ()) {
       const auto child_it = cell_index_by_name.find (instance.cellName ());
       if (child_it == cell_index_by_name.end ()) {
         common_reader_warn (tl::to_string (tr ("Missing child cell: ")) + instance.cellName ());
@@ -317,4 +317,4 @@ void Reader::do_read (db::Layout &layout)
   }
 }
 
-} // namespace coredb
+} // namespace roomdb

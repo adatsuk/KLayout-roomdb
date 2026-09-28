@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate Cap'n Proto C++ for the KLayout mcore plugin from CommonDB schema.
+# Regenerate Cap'n Proto C++ for the KLayout mroom plugin from CommonDB schema.
 set -euo pipefail
 
 if [[ -n "${COMMONDB_ROOT:-}" ]]; then

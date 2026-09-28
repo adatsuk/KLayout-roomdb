@@ -18,8 +18,8 @@ if defined COMMONDB_ROOT (
 )
 
 set "STREAMERS=%KLAYOUT%\src\plugins\streamers"
-set "MCORE=%ROOT%\integrations\klayout\mcore"
-set "LINK=%STREAMERS%\mcore"
+set "MROOM=%ROOT%\integrations\klayout\mroom"
+set "LINK=%STREAMERS%\mroom"
 
 if not exist "%KLAYOUT%\src" (
   echo KLayout not found at %KLAYOUT%
@@ -31,19 +31,19 @@ if exist "%LINK%" (
   rmdir "%LINK%" 2>nul
   del "%LINK%" 2>nul
 )
-mklink /J "%LINK%" "%MCORE%"
+mklink /J "%LINK%" "%MROOM%"
 if errorlevel 1 exit /b 1
 
 (
   echo COMMONDB_ROOT = %COMMONDB:\=/%
   echo KLAYOUT_SRC = %KLAYOUT%/src
-) > "%MCORE%\db_plugin\local.pri"
+) > "%MROOM%\db_plugin\local.pri"
 
-findstr /C:"SUBDIRS += mcore" "%STREAMERS%\streamers.pro" >nul 2>&1 || (
+findstr /C:"SUBDIRS += mroom" "%STREAMERS%\streamers.pro" >nul 2>&1 || (
   echo.>> "%STREAMERS%\streamers.pro"
-  echo # CommonDB CORE streamer>> "%STREAMERS%\streamers.pro"
-  echo SUBDIRS += mcore>> "%STREAMERS%\streamers.pro"
+  echo # CommonDB ROOM streamer>> "%STREAMERS%\streamers.pro"
+  echo SUBDIRS += mroom>> "%STREAMERS%\streamers.pro"
 )
 
-echo Linked %LINK% -^> %MCORE%
+echo Linked %LINK% -^> %MROOM%
 echo Next: cd %KLAYOUT% ^&^& build.bat -j 4

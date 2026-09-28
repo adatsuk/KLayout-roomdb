@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package KLayout + mcore + Qt5/Cap'n Proto runtimes into a portable tar.gz (RHEL 8 / Rocky 8).
+# Package KLayout + mroom + Qt5/Cap'n Proto runtimes into a portable tar.gz (RHEL 8 / Rocky 8).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,8 +37,8 @@ export LD_LIBRARY_PATH="${STAGE}/lib:${DEPLOY_LDPATH}"
 
 if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins' "$STAGE/klayout" || true
-    if [[ -f "$STAGE/db_plugins/libmcore.so" ]]; then
-        patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$STAGE/db_plugins/libmcore.so" || true
+    if [[ -f "$STAGE/db_plugins/libmroom.so" ]]; then
+        patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$STAGE/db_plugins/libmroom.so" || true
     fi
 fi
 
@@ -53,8 +53,8 @@ bundle_ldd() {
         done < <(ldd "$bin" | awk '/=>/ {print $3}' | grep -vE '^/(lib|usr/lib)' || true)
     }
     copy_deps "$STAGE/klayout"
-    if [[ -f "$STAGE/db_plugins/libmcore.so" ]]; then
-        copy_deps "$STAGE/db_plugins/libmcore.so"
+    if [[ -f "$STAGE/db_plugins/libmroom.so" ]]; then
+        copy_deps "$STAGE/db_plugins/libmroom.so"
     fi
     QT_PLUGINS="$(qmake -query QT_INSTALL_PLUGINS 2>/dev/null || true)"
     if [[ -n "$QT_PLUGINS" && -d "$QT_PLUGINS" ]]; then
@@ -92,13 +92,13 @@ EOF
 chmod +x "$DIST/klayout-run.sh"
 
 cat >"$DIST/BUNDLE.txt" <<EOF
-KLayout + CORE (mcore) portable bundle ($BUNDLE_LABEL)
+KLayout + ROOM (mroom) portable bundle ($BUNDLE_LABEL)
 Built: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-Run: ./klayout-run.sh [file.layout.core]
+Run: ./klayout-run.sh [file.layout.room]
 
 Requires: Linux x86_64 with glibc 2.28+ (RHEL 8 / Rocky Linux 8 / AlmaLinux 8).
-Includes mcore streamer for .core / *.layout.core files.
+Includes mroom streamer for .room / *.layout.room files.
 EOF
 
 rm -rf "$STAGE"

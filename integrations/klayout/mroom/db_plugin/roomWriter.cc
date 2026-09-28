@@ -1,4 +1,4 @@
-#include "coreWriter.h"
+#include "roomWriter.h"
 #include "propertyBridge.h"
 
 #include "block.h"
@@ -36,7 +36,7 @@
 #include <string>
 #include <vector>
 
-namespace coredb
+namespace roomdb
 {
 
 namespace {
@@ -46,29 +46,29 @@ std::int64_t cast_coord (db::Coord value)
   return static_cast<std::int64_t> (value);
 }
 
-core::Point make_point (const db::Point &point)
+room::Point make_point (const db::Point &point)
 {
-  return core::Point { cast_coord (point.x ()), cast_coord (point.y ()) };
+  return room::Point { cast_coord (point.x ()), cast_coord (point.y ()) };
 }
 
-core::Orient orient_from_fp (int code)
+room::Orient orient_from_fp (int code)
 {
   switch (code) {
-  case db::FTrans::r0: return core::Orient::R0;
-  case db::FTrans::r90: return core::Orient::R90;
-  case db::FTrans::r180: return core::Orient::R180;
-  case db::FTrans::r270: return core::Orient::R270;
-  case db::FTrans::m0: return core::Orient::MY;
-  case db::FTrans::m45: return core::Orient::MY90;
-  case db::FTrans::m90: return core::Orient::MX;
-  case db::FTrans::m135: return core::Orient::MX90;
-  default: return core::Orient::R0;
+  case db::FTrans::r0: return room::Orient::R0;
+  case db::FTrans::r90: return room::Orient::R90;
+  case db::FTrans::r180: return room::Orient::R180;
+  case db::FTrans::r270: return room::Orient::R270;
+  case db::FTrans::m0: return room::Orient::MY;
+  case db::FTrans::m45: return room::Orient::MY90;
+  case db::FTrans::m90: return room::Orient::MX;
+  case db::FTrans::m135: return room::Orient::MX90;
+  default: return room::Orient::R0;
   }
 }
 
-core::Transform make_transform (const db::ICplxTrans &trans)
+room::Transform make_transform (const db::ICplxTrans &trans)
 {
-  core::Transform result;
+  room::Transform result;
   const db::Vector disp = trans.disp ();
   result.x = cast_coord (disp.x ());
   result.y = cast_coord (disp.y ());
@@ -77,9 +77,9 @@ core::Transform make_transform (const db::ICplxTrans &trans)
   return result;
 }
 
-core::LayerSpec layer_spec_from_properties (const db::LayerProperties &properties)
+room::LayerSpec layer_spec_from_properties (const db::LayerProperties &properties)
 {
-  core::LayerSpec spec;
+  room::LayerSpec spec;
   if (properties.layer >= 0) {
     spec.layerNum = static_cast<std::uint16_t> (properties.layer);
   }
@@ -92,15 +92,15 @@ core::LayerSpec layer_spec_from_properties (const db::LayerProperties &propertie
   return spec;
 }
 
-void write_database_to_stream (core::Database &database, tl::OutputStream &stream)
+void write_database_to_stream (room::Database &database, tl::OutputStream &stream)
 {
   database.lib ().recomputeAllBBoxes ();
   database.lib ().refreshIndex ();
-  database.setFileSummary (core::FileSummary::fromLib (database.lib (), core::ViewType::Layout));
+  database.setFileSummary (room::FileSummary::fromLib (database.lib (), room::ViewType::Layout));
 
-  core::SaveOptions options;
+  room::SaveOptions options;
   capnp::MallocMessageBuilder message;
-  writeDatabase (message.initRoot<core::schema::Database> (), database, options);
+  writeDatabase (message.initRoot<room::schema::Database> (), database, options);
 
   kj::VectorOutputStream vector_stream;
   capnp::writeMessage (vector_stream, message);
@@ -136,15 +136,15 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
   const std::string lib_name = resolve_lib_name (layout, options, stream);
   layout.add_meta_info ("libname", db::MetaInfo (tl::to_string (tr ("Library name")), lib_name));
 
-  core::Database database;
-  database.setGenerator ("KLayout CORE writer");
-  database.lib () = core::Lib (lib_name);
+  room::Database database;
+  database.setGenerator ("KLayout ROOM writer");
+  database.lib () = room::Lib (lib_name);
   database.lib ().properties () = properties_from_klayout (layout.prop_id ());
 
   const double layout_dbu = layout.dbu ();
   const double dbu_per_micron = (layout_dbu > 0.0) ? (1.0 / layout_dbu) : 1000.0;
 
-  std::map<std::pair<std::uint16_t, std::uint16_t>, core::LayerSpec> lib_layer_catalog;
+  std::map<std::pair<std::uint16_t, std::uint16_t>, room::LayerSpec> lib_layer_catalog;
   for (unsigned int li = 0; li < layout.layers (); ++li) {
     if (! layout.is_valid_layer (li)) {
       continue;
@@ -171,9 +171,9 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
       continue;
     }
 
-    core::Cell &core_cell = database.lib ().getOrCreateCell (cell_name);
+    room::Cell &core_cell = database.lib ().getOrCreateCell (cell_name);
     core_cell.properties () = properties_from_klayout (cell.prop_id ());
-    core::CellContent &content = core_cell.getOrCreateContent (core::ViewType::Layout, dbu_per_micron);
+    room::CellContent &content = core_cell.getOrCreateContent (room::ViewType::Layout, dbu_per_micron);
     content.setDbuPerMicron (dbu_per_micron);
     content.layers ().clear ();
 
@@ -200,16 +200,16 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
         if (shape.is_box ()) {
           db::Box box;
           shape.box (box);
-          core::Shape::RectData rect;
+          room::Shape::RectData rect;
           rect.layerId = layer_id;
-          rect.box = core::Box {
+          rect.box = room::Box {
             cast_coord (box.left ()), cast_coord (box.bottom ()),
             cast_coord (box.right ()), cast_coord (box.top ())
           };
           content.block ().shapes ().emplace_back (rect);
           content.block ().shapes ().back ().properties () = properties_from_klayout (shape.prop_id ());
         } else if (shape.is_polygon () || shape.is_simple_polygon ()) {
-          core::Shape::PolygonData polygon;
+          room::Shape::PolygonData polygon;
           polygon.layerId = layer_id;
           if (shape.is_polygon ()) {
             db::Polygon poly;
@@ -231,7 +231,7 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
         } else if (shape.is_path ()) {
           db::Path path;
           shape.path (path);
-          core::Shape::PathData path_data;
+          room::Shape::PathData path_data;
           path_data.layerId = layer_id;
           path_data.width = static_cast<std::uint32_t> (std::max<db::Coord> (0, path.width ()));
           for (auto p = path.begin (); p != path.end (); ++p) {
@@ -244,11 +244,11 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
         } else if (shape.is_text ()) {
           db::Text text;
           shape.text (text);
-          core::Shape::TextData label;
+          room::Shape::TextData label;
           label.layerId = layer_id;
           label.text = text.string ();
           const db::Vector disp = text.trans ().disp ();
-          label.position = core::Point { cast_coord (disp.x ()), cast_coord (disp.y ()) };
+          label.position = room::Point { cast_coord (disp.x ()), cast_coord (disp.y ()) };
           label.height = static_cast<std::uint32_t> (std::max<db::Coord> (0, text.size ()));
           content.block ().shapes ().emplace_back (label);
           content.block ().shapes ().back ().properties () = properties_from_klayout (shape.prop_id ());
@@ -279,4 +279,4 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
   write_database_to_stream (database, stream);
 }
 
-} // namespace coredb
+} // namespace roomdb

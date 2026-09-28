@@ -1,11 +1,11 @@
-#ifndef HDR_coreFormat
-#define HDR_coreFormat
+#ifndef HDR_roomFormat
+#define HDR_roomFormat
 
 #include "dbPluginCommon.h"
 #include "dbLoadLayoutOptions.h"
 #include "dbSaveLayoutOptions.h"
 
-namespace coredb
+namespace roomdb
 {
 
 class DB_PLUGIN_PUBLIC ReaderOptions
@@ -21,7 +21,7 @@ public:
 
   const std::string &format_name () const override
   {
-    static const std::string name ("CORE");
+    static const std::string name ("ROOM");
     return name;
   }
 };
@@ -39,7 +39,7 @@ public:
 
   const std::string &format_name () const override
   {
-    static const std::string name ("CORE");
+    static const std::string name ("ROOM");
     return name;
   }
 };

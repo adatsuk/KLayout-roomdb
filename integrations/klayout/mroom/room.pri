@@ -1,9 +1,9 @@
-# CommonDB CORE sources compiled into the KLayout db plugin (no external libcore).
+# CommonDB ROOM sources compiled into the KLayout db plugin (no external libroom).
 #
 # Requires COMMONDB_ROOT in db_plugin/local.pri (Cap'n Proto from third_party/capnp-install).
 
 isEmpty(COMMONDB_ROOT) {
-  error("Set COMMONDB_ROOT in integrations/klayout/mcore/db_plugin/local.pri")
+  error("Set COMMONDB_ROOT in integrations/klayout/mroom/db_plugin/local.pri")
 }
 
 CORE_GEN = $$COMMONDB_ROOT/integrations/klayout/generated
@@ -17,7 +17,7 @@ INCLUDEPATH += \
 
 LIBS += -L$$CAPNP_ROOT/lib -lcapnp -lkj
 
-DEFINES += CORE_KLAYOUT_PLUGIN
+DEFINES += ROOM_KLAYOUT_PLUGIN
 
 CONFIG += c++17
 QMAKE_CXXFLAGS += -std=c++17

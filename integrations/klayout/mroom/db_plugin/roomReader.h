@@ -1,5 +1,5 @@
-#ifndef HDR_coreReader
-#define HDR_coreReader
+#ifndef HDR_roomReader
+#define HDR_roomReader
 
 #include "dbPluginCommon.h"
 #include "dbCommonReader.h"
@@ -7,7 +7,7 @@
 
 #include "tlStream.h"
 
-namespace coredb
+namespace roomdb
 {
 
 class DB_PLUGIN_PUBLIC Reader
@@ -17,7 +17,7 @@ public:
   explicit Reader (tl::InputStream &stream);
   ~Reader () noexcept override;
 
-  const char *format () const override { return "CORE"; }
+  const char *format () const override { return "ROOM"; }
 
 protected:
   void do_read (db::Layout &layout) override;

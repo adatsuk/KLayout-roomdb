@@ -9,7 +9,7 @@
 #include <optional>
 #include <string>
 
-namespace coredb
+namespace roomdb
 {
 
 namespace {
@@ -66,16 +66,16 @@ std::string encode_gds_typed_value (const tl::Variant &value)
 
 } // namespace
 
-db::properties_id_type properties_id_from_core (const std::vector<core::Property> &properties)
+db::properties_id_type properties_id_from_core (const std::vector<room::Property> &properties)
 {
   if (properties.empty ()) {
     return 0;
   }
 
   db::PropertiesSet property_set;
-  for (const core::Property &property : properties) {
-    if (core::gds_prop::isGdsProperty (property)) {
-      const std::optional<std::int16_t> attr = core::gds_prop::attrOf (property);
+  for (const room::Property &property : properties) {
+    if (room::gds_prop::isGdsProperty (property)) {
+      const std::optional<std::int16_t> attr = room::gds_prop::attrOf (property);
       if (! attr) {
         continue;
       }
@@ -91,9 +91,9 @@ db::properties_id_type properties_id_from_core (const std::vector<core::Property
   return db::properties_id (property_set);
 }
 
-std::vector<core::Property> properties_from_klayout (db::properties_id_type prop_id)
+std::vector<room::Property> properties_from_klayout (db::properties_id_type prop_id)
 {
-  std::vector<core::Property> properties;
+  std::vector<room::Property> properties;
   if (prop_id == 0) {
     return properties;
   }
@@ -111,15 +111,15 @@ std::vector<core::Property> properties_from_klayout (db::properties_id_type prop
     }
 
     if (attr >= 0 && attr <= std::numeric_limits<std::uint16_t>::max ()) {
-      properties.push_back (core::gds_prop::make (
+      properties.push_back (room::gds_prop::make (
         static_cast<std::int16_t> (attr),
         encode_gds_typed_value (value)));
     } else if (! name.is_nil ()) {
-      properties.push_back (core::Property (name.to_string (), value.to_string ()));
+      properties.push_back (room::Property (name.to_string (), value.to_string ()));
     }
   }
 
   return properties;
 }
 
-} // namespace coredb
+} // namespace roomdb

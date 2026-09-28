@@ -1,7 +1,7 @@
-#include "coreFormat.h"
-#include "coreReader.h"
+#include "roomFormat.h"
+#include "roomReader.h"
 #include "dbLoadLayoutOptions.h"
-#include "layCoreReaderPlugin.h"
+#include "layRoomReaderPlugin.h"
 
 #include "tlClassRegistry.h"
 
@@ -13,7 +13,7 @@ class CoreReaderPluginDeclaration
 {
 public:
   CoreReaderPluginDeclaration ()
-    : StreamReaderPluginDeclaration (coredb::ReaderOptions ().format_name ())
+    : StreamReaderPluginDeclaration (roomdb::ReaderOptions ().format_name ())
   {
   }
 
@@ -24,11 +24,11 @@ public:
 
   db::FormatSpecificReaderOptions *create_specific_options () const override
   {
-    return new coredb::ReaderOptions ();
+    return new roomdb::ReaderOptions ();
   }
 };
 
 static tl::RegisteredClass<lay::PluginDeclaration>
-  plugin_decl (new CoreReaderPluginDeclaration (), 10000, "COREReader");
+  plugin_decl (new CoreReaderPluginDeclaration (), 10000, "ROOMReader");
 
 }

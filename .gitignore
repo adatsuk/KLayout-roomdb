@@ -1,11 +1,12 @@
 # KLayout build outputs
 build-*
+!build-klayout.sh
 bin-*
 mkqtdecl*.tmp
 
-# mcore local paths (machine-specific)
-integrations/klayout/mcore/db_plugin/local.pri
-klayout-src/src/plugins/streamers/mcore
+# mroom local paths (machine-specific)
+integrations/klayout/mroom/db_plugin/local.pri
+klayout-src/src/plugins/streamers/mroom
 
 # IDE
 .vscode/
