@@ -39,6 +39,7 @@ SOURCES += \
   $$CORE_SRC/database.cpp \
   $$CORE_SRC/file_summary.cpp \
   $$CORE_SRC/serialization.cpp \
+  $$CORE_SRC/mapped_file.cpp \
   $$CORE_SRC/compact_codec.cpp \
   $$CORE_SRC/varint_codec.cpp \
   $$CORE_GEN/common.capnp.c++ \
