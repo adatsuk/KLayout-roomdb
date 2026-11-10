@@ -26,8 +26,10 @@
 #include "tlUnitTest.h"
 
 #define _USE_MATH_DEFINES // for MSVC
+#include <cmath>
 #include <math.h>
 #include <clocale>
+#include <cstdio>
 
 using namespace tl;
 
@@ -722,5 +724,158 @@ TEST(17)
   ulln = std::numeric_limits<unsigned long long>::min ();
   ex_from_string (to_string (ulln), ullnn);
   EXPECT_EQ (ulln, ullnn);
+}
+
+//  exact integer parsing: values beyond 2^53 must not go through double
+TEST(18)
+{
+  long long ll;
+
+  from_string ("9007199254740993", ll);
+  EXPECT_EQ (ll, 9007199254740993LL);
+
+  from_string ("9223372036854775807", ll);
+  EXPECT_EQ (ll, 9223372036854775807LL);
+
+  from_string ("-9223372036854775808", ll);
+  EXPECT_EQ (ll, -9223372036854775807LL - 1);
+
+  bool error = false;
+  try { from_string ("9223372036854775808", ll); } catch (...) { error = true; }
+  EXPECT_EQ (error, true);
+
+  unsigned long long ull;
+  from_string ("18446744073709551615", ull);
+  EXPECT_EQ (ull, 18446744073709551615ULL);
+
+  error = false;
+  try { from_string ("18446744073709551616", ull); } catch (...) { error = true; }
+  EXPECT_EQ (error, true);
+
+  int i;
+  from_string ("2147483647", i);
+  EXPECT_EQ (i, 2147483647);
+
+  error = false;
+  try { from_string ("2147483648", i); } catch (...) { error = true; }
+  EXPECT_EQ (error, true);
+
+  error = false;
+  try { from_string ("-2147483649", i); } catch (...) { error = true; }
+  EXPECT_EQ (error, true);
+
+  //  no longer supported and does not make sense:
+  //  from_string ("1e3", i);
+  //  instead, works with evaluation:
+  from_string_ext ("1e3", i);
+  EXPECT_EQ (i, 1000);
+
+  //  the leading/trailing whitespace handling stays the same
+  from_string ("   12   ", i);
+  EXPECT_EQ (i, 12);
+  from_string ("  -12  ", ll);
+  EXPECT_EQ (ll, -12);
+
+  //  garbage still produces the original message
+  try {
+    from_string ("12abc", i);
+    EXPECT (false);
+  } catch (tl::Exception &ex) {
+    EXPECT_EQ (ex.msg (), "Unexpected text after numeric value: '...abc'");
+  }
+}
+
+//  a huge exponent must not overflow the exponent accumulator
+TEST(19)
+{
+  //  an exponent beyond the int range must not wrap around: either an error or infinity is fine
+  double d = 0.0;
+  bool threw = false;
+  try {
+    from_string ("1e99999999999", d);
+  } catch (tl::Exception &) {
+    threw = true;
+  }
+  EXPECT_EQ (threw || std::isinf (d), true);
+
+  d = 1.0;
+  threw = false;
+  try {
+    from_string ("1e-99999999999", d);
+  } catch (tl::Exception &) {
+    threw = true;
+  }
+  EXPECT_EQ (threw || d == 0.0, true);
+}
+
+//  the minimum values are checked explicitly: negating them would overflow
+TEST(to_string_integers)
+{
+  char ref[64];
+
+  static const int int_values[] = {
+    0, 1, -1, 9, 10, 99, 100,
+    std::numeric_limits<int>::min (), std::numeric_limits<int>::max ()
+  };
+  for (size_t i = 0; i < sizeof (int_values) / sizeof (int_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%d", int_values[i]);
+    EXPECT_EQ (tl::to_string (int_values[i]), std::string (ref));
+  }
+
+  static const unsigned int uint_values[] = {
+    0, 1, (unsigned int) -1, 9, 10, 99, 100,
+    std::numeric_limits<unsigned int>::min (), std::numeric_limits<unsigned int>::max ()
+  };
+  for (size_t i = 0; i < sizeof (uint_values) / sizeof (uint_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%u", uint_values[i]);
+    EXPECT_EQ (tl::to_string (uint_values[i]), std::string (ref));
+  }
+
+  static const long long_values[] = {
+    0, 1, -1, 9, 10, 99, 100,
+    std::numeric_limits<long>::min (), std::numeric_limits<long>::max ()
+  };
+  for (size_t i = 0; i < sizeof (long_values) / sizeof (long_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%ld", long_values[i]);
+    EXPECT_EQ (tl::to_string (long_values[i]), std::string (ref));
+  }
+
+  static const unsigned long ulong_values[] = {
+    0, 1, (unsigned long) -1, 9, 10, 99, 100,
+    std::numeric_limits<unsigned long>::min (), std::numeric_limits<unsigned long>::max ()
+  };
+  for (size_t i = 0; i < sizeof (ulong_values) / sizeof (ulong_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%lu", ulong_values[i]);
+    EXPECT_EQ (tl::to_string (ulong_values[i]), std::string (ref));
+  }
+
+  static const long long llong_values[] = {
+    0, 1, -1, 9, 10, 99, 100,
+    -9223372036854775807LL - 1, 9223372036854775807LL,
+    2147483648LL, 4294967296LL, 9007199254740993LL
+  };
+  for (size_t i = 0; i < sizeof (llong_values) / sizeof (llong_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%lld", llong_values[i]);
+    EXPECT_EQ (tl::to_string (llong_values[i]), std::string (ref));
+  }
+
+  static const unsigned long long ullong_values[] = {
+    0, 1, (unsigned long long) -1, 9, 10, 99, 100,
+    std::numeric_limits<unsigned long long>::max (),
+    2147483648ULL, 4294967296ULL, 9007199254740993ULL
+  };
+  for (size_t i = 0; i < sizeof (ullong_values) / sizeof (ullong_values[0]); ++i) {
+    snprintf (ref, sizeof (ref), "%llu", ullong_values[i]);
+    EXPECT_EQ (tl::to_string (ullong_values[i]), std::string (ref));
+  }
+
+#if defined(HAVE_64BIT_COORD)
+  const __int128 int128_max = (__int128) (((unsigned __int128) -1) >> 1);
+  const __int128 int128_min = -int128_max - 1;
+  EXPECT_EQ (tl::to_string (int128_min), "-170141183460469231731687303715884105728");
+  EXPECT_EQ (tl::to_string (int128_max), "170141183460469231731687303715884105727");
+  EXPECT_EQ (tl::to_string ((__int128) 0), "0");
+  EXPECT_EQ (tl::to_string ((__int128) -1), "-1");
+#endif
 }
 

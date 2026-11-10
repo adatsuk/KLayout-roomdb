@@ -1308,7 +1308,7 @@ TEST(4_ResAndCapExtraction)
     "circuit TOP (VSS=VSS,IN=IN,OUT=OUT,VDD=VDD);\n"
     "  device PMOS $1 (S=VDD,G=$4,D=OUT) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
     "  device PMOS $2 (S=VDD,G=IN,D=$3) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
-    "  device NMOS $3 (S=VSS,G=$4,D=OUT) (L=0.4,W=4.6,AS=2.185,AD=2.185,PS=8.8,PD=8.8);\n"
+    "  device NMOS $3 (S=VSS,G=$4,D=OUT) (L=0.4,W=4.6,AS=2.76,AD=1.61,PS=11.6,PD=6);\n"
     "  device MIM_CAP $5 (A=$4,B=VSS) (C=2.622e-14,A=26.22,P=29.8);\n"
     "  device POLY_RES $7 (A=$3,B=$4) (R=750,L=6,W=0.4,A=2.4,P=13.6);\n"
     "  device POLY_RES $9 (A=$4,B=VSS) (R=1825,L=14.6,W=0.4,A=5.84,P=30);\n"
@@ -1582,7 +1582,7 @@ TEST(5_ResAndCapWithBulkExtraction)
     "circuit TOP (VSS=VSS,IN=IN,OUT=OUT,VDD=VDD,BULK=BULK,NWELL=NWELL);\n"
     "  device PMOS $1 (S=VDD,G=$4,D=OUT,B=NWELL) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
     "  device PMOS $2 (S=VDD,G=IN,D=$3,B=NWELL) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
-    "  device NMOS $3 (S=VSS,G=$4,D=OUT,B=BULK) (L=0.4,W=4.6,AS=2.185,AD=2.185,PS=8.8,PD=8.8);\n"
+    "  device NMOS $3 (S=VSS,G=$4,D=OUT,B=BULK) (L=0.4,W=4.6,AS=2.76,AD=1.61,PS=11.6,PD=6);\n"
     "  device MIM_CAP_SUBSTRATE $5 (A=$4,B=VSS,W=BULK) (C=1.334e-14,A=13.34,P=15);\n"
     "  device MIM_CAP_NWELL $6 (A=$4,B=VSS,W=NWELL) (C=1.288e-14,A=12.88,P=14.8);\n"
     "  device POLY_RES_NWELL $7 (A=$3,B=$4,W=NWELL) (R=750,L=6,W=0.4,A=2.4,P=13.6);\n"
@@ -1828,7 +1828,7 @@ TEST(6_BJT3TransistorExtraction)
     "  device PMOS $1 (S=$4,G=VSS,D=VDD,B=VDD) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
     "  device PMOS $2 (S=VDD,G=$4,D=OUT,B=VDD) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
     "  device PMOS $3 (S=VDD,G=IN,D=$3,B=VDD) (L=0.4,W=2.3,AS=1.38,AD=1.38,PS=5.8,PD=5.8);\n"
-    "  device NMOS $4 (S=VSS,G=$4,D=OUT,B=BULK) (L=0.4,W=4.6,AS=2.185,AD=2.185,PS=8.8,PD=8.8);\n"
+    "  device NMOS $4 (S=VSS,G=$4,D=OUT,B=BULK) (L=0.4,W=4.6,AS=2.76,AD=1.61,PS=11.6,PD=6);\n"
     "  device PNP $6 (C=BULK,B=$3,E=$3) (AE=3.06,PE=7,AB=25.2,PB=21.2,AC=25.2,PC=21.2,NE=1);\n"
     "  device PNP $7 (C=BULK,B=$3,E=$4) (AE=6.12,PE=14,AB=25.2,PB=21.2,AC=25.2,PC=21.2,NE=2);\n"
     "  device NMOS $9 (S=VSS,G=IN,D=$3,B=BULK) (L=0.4,W=3.1,AS=1.86,AD=1.86,PS=7.4,PD=7.4);\n"
@@ -3509,6 +3509,291 @@ TEST(15_SoftConnections)
   std::string au = tl::testdata ();
   au = tl::combine_path (au, "algo");
   au = tl::combine_path (au, "soft_connections_au.gds");
+
+  db::compare_layouts (_this, ly, au);
+}
+
+namespace
+{
+
+class Issue2525DeviceClass
+  : public db::DeviceClass
+{
+public:
+  Issue2525DeviceClass ()
+  {
+    db::DeviceClass::add_terminal_definition (db::DeviceTerminalDefinition ("A", ""));
+  }
+};
+
+class Issue2525DeviceExtractor
+  : public db::NetlistDeviceExtractor
+{
+public:
+  Issue2525DeviceExtractor (const std::string &name)
+    : db::NetlistDeviceExtractor (name)
+  {
+    //  .. nothing yet ..
+  }
+
+  void setup ()
+  {
+    define_layer ("MK", "marker");
+    define_layer ("A", "terminal_A");
+
+    register_device_class (new Issue2525DeviceClass ());
+  }
+
+  db::Connectivity get_connectivity (const db::Layout & /*layout*/, const std::vector<unsigned int> &layers) const
+  {
+    unsigned int marker = layers[0];
+    unsigned int a = layers[1];
+
+    db::Connectivity conn;
+    conn.connect (marker, marker);
+    conn.connect (a, a);
+    conn.connect (marker, a);
+    return conn;
+  }
+
+  void extract_devices (const std::vector<db::Region> &layer_geometry)
+  {
+    const db::Region &a = layer_geometry[1].merged ();
+
+    db::Device *device = create_device ();
+
+    for (auto p = a.begin (); ! p.at_end (); ++p) {
+      define_terminal (device, 0 /*terminal A*/, 1, *p);
+    }
+  }
+};
+
+}
+
+//  issue #2525
+TEST(16_MultiplePolygonsForDeviceTerminal)
+{
+  db::Layout ly;
+  db::LayerMap lmap;
+
+  unsigned int marker     = define_layer (ly, lmap, 1);
+  unsigned int a          = define_layer (ly, lmap, 2);
+  unsigned int m1         = define_layer (ly, lmap, 3);
+
+  {
+    db::LoadLayoutOptions options;
+    options.get_options<db::CommonReaderOptions> ().layer_map = lmap;
+    options.get_options<db::CommonReaderOptions> ().create_other_layers = false;
+
+    std::string fn (tl::testdata ());
+    fn = tl::combine_path (fn, "algo");
+    fn = tl::combine_path (fn, "multipolygon_terminals.gds");
+
+    tl::InputStream stream (fn);
+    db::Reader reader (stream);
+    reader.read (ly, options);
+  }
+
+  db::Cell &tc = ly.cell (*ly.begin_top_down ());
+
+  db::DeepShapeStore dss;
+  dss.set_text_enlargement (1);
+  dss.set_text_property_name (tl::Variant ("LABEL"));
+
+  //  original layers
+  db::Region rmarker (db::RecursiveShapeIterator (ly, tc, marker), dss);
+  db::Region ra (db::RecursiveShapeIterator (ly, tc, a), dss);
+  db::Region rm1 (db::RecursiveShapeIterator (ly, tc, m1), dss);
+
+  //  perform the extraction
+
+  db::Netlist nl;
+  db::hier_clusters<db::NetShape> cl;
+
+  Issue2525DeviceExtractor dex ("DEV");
+
+  db::NetlistDeviceExtractor::input_layers dl;
+
+  dl["MK"] = &rmarker;
+  dl["A"] = &ra;
+  dex.extract (dss, 0, dl, nl, cl);
+
+  //  perform the net extraction
+
+  db::NetlistExtractor net_ex;
+
+  db::Connectivity conn;
+
+  //  Connectivity
+  conn.connect(rm1);
+  conn.connect(ra);
+  conn.connect(ra, rm1);
+
+  net_ex.extract_nets (dss, 0, conn, nl, cl);
+
+  EXPECT_EQ (all_net_names_unique (nl), true);
+
+  //  debug layers produced for nets
+  std::map<unsigned int, unsigned int> dump_map;
+  dump_map [layer_of (rmarker)   ] = ly.insert_layer (db::LayerProperties (100, 0));
+  dump_map [layer_of (ra)        ] = ly.insert_layer (db::LayerProperties (101, 0));
+  dump_map [layer_of (rm1)       ] = ly.insert_layer (db::LayerProperties (102, 0));
+
+  //  write nets to layout
+  db::CellMapping cm = dss.cell_mapping_to_original (0, &ly, tc.cell_index ());
+  dump_nets_to_layout (nl, cl, ly, dump_map, cm, true);
+
+  //  compare netlist as string
+  CHECKPOINT ();
+  EXPECT_EQ (nl.to_string (),
+    "circuit TOP ();\n"
+    "  device DEV $1 (A=ABC) ();\n"
+    "  device DEV $2 (A=ABC) ();\n"
+    "  device DEV $3 (A=ABC) ();\n"
+    "end;\n"
+  );
+
+  // doesn't do anything here, but we test that this does not destroy anything:
+  nl.combine_devices ();
+
+  //  make pins for named nets of top-level circuits - this way they are not purged
+  nl.make_top_level_pins ();
+  nl.purge ();
+
+  //  compare netlist as string
+  CHECKPOINT ();
+  EXPECT_EQ (nl.to_string (),
+    "circuit TOP (ABC=ABC);\n"
+    "  device DEV $1 (A=ABC) ();\n"
+    "  device DEV $2 (A=ABC) ();\n"
+    "  device DEV $3 (A=ABC) ();\n"
+    "end;\n"
+  );
+
+  //  compare the collected test data
+
+  std::string au = tl::testdata ();
+  au = tl::combine_path (au, "algo");
+  au = tl::combine_path (au, "multipolygon_terminals_au.gds");
+
+  db::compare_layouts (_this, ly, au);
+}
+
+//  issue #2525 with soft connection
+TEST(17_MultiplePolygonsForDeviceTerminalWithSoftConnect)
+{
+  db::Layout ly;
+  db::LayerMap lmap;
+
+  unsigned int marker     = define_layer (ly, lmap, 1);
+  unsigned int a          = define_layer (ly, lmap, 2);
+  unsigned int m1         = define_layer (ly, lmap, 3);
+
+  {
+    db::LoadLayoutOptions options;
+    options.get_options<db::CommonReaderOptions> ().layer_map = lmap;
+    options.get_options<db::CommonReaderOptions> ().create_other_layers = false;
+
+    std::string fn (tl::testdata ());
+    fn = tl::combine_path (fn, "algo");
+    fn = tl::combine_path (fn, "multipolygon_terminals.gds");
+
+    tl::InputStream stream (fn);
+    db::Reader reader (stream);
+    reader.read (ly, options);
+  }
+
+  db::Cell &tc = ly.cell (*ly.begin_top_down ());
+
+  db::DeepShapeStore dss;
+  dss.set_text_enlargement (1);
+  dss.set_text_property_name (tl::Variant ("LABEL"));
+
+  //  original layers
+  db::Region rmarker (db::RecursiveShapeIterator (ly, tc, marker), dss);
+  db::Region ra (db::RecursiveShapeIterator (ly, tc, a), dss);
+  db::Region rm1 (db::RecursiveShapeIterator (ly, tc, m1), dss);
+
+  //  perform the extraction
+
+  db::Netlist nl;
+  db::hier_clusters<db::NetShape> cl;
+
+  Issue2525DeviceExtractor dex ("DEV");
+
+  db::NetlistDeviceExtractor::input_layers dl;
+
+  dl["MK"] = &rmarker;
+  dl["A"] = &ra;
+  dex.extract (dss, 0, dl, nl, cl);
+
+  //  perform the net extraction
+
+  db::NetlistExtractor net_ex;
+
+  db::Connectivity conn;
+
+  //  Connectivity
+  conn.connect(rm1);
+  conn.connect(ra);
+  conn.soft_connect (ra, rm1);
+
+  net_ex.extract_nets (dss, 0, conn, nl, cl);
+
+  annotate_soft_connections (nl, cl);
+
+  EXPECT_EQ (all_net_names_unique (nl), true);
+
+  //  debug layers produced for nets
+  std::map<unsigned int, unsigned int> dump_map;
+  dump_map [layer_of (rmarker)   ] = ly.insert_layer (db::LayerProperties (100, 0));
+  dump_map [layer_of (ra)        ] = ly.insert_layer (db::LayerProperties (101, 0));
+  dump_map [layer_of (rm1)       ] = ly.insert_layer (db::LayerProperties (102, 0));
+
+  //  write nets to layout
+  db::CellMapping cm = dss.cell_mapping_to_original (0, &ly, tc.cell_index ());
+  dump_nets_to_layout (nl, cl, ly, dump_map, cm, true);
+
+  //  compare netlist as string
+  CHECKPOINT ();
+  EXPECT_EQ (nl.to_string (),
+    "circuit TOP ();\n"
+    "  device DEV $1 (A=$1) ();\n"
+    "  device DEV $2 (A=$5) ();\n"
+    "  device DEV $3 (A=$6) ();\n"
+    "  device SOFT $4 (A=$1,C=ABC) (A=0,P=0);\n"
+    "  device SOFT $5 (A=$6,C=ABC) (A=0,P=0);\n"
+    "  device SOFT $6 (A=$1,C=$4) (A=0,P=0);\n"
+    "  device SOFT $7 (A=$5,C=$4) (A=0,P=0);\n"
+    "end;\n"
+  );
+
+  // doesn't do anything here, but we test that this does not destroy anything:
+  nl.combine_devices ();
+
+  //  make pins for named nets of top-level circuits - this way they are not purged
+  nl.make_top_level_pins ();
+  nl.purge ();
+
+  //  compare netlist as string
+  CHECKPOINT ();
+  EXPECT_EQ (nl.to_string (),
+    "circuit TOP (ABC=ABC);\n"
+    "  device DEV $1 (A=$1) ();\n"
+    "  device DEV $2 (A=$5) ();\n"
+    "  device DEV $3 (A=$6) ();\n"
+    "  device SOFT $4 (A=$1,C=ABC) (A=0,P=0);\n"
+    "  device SOFT $5 (A=$6,C=ABC) (A=0,P=0);\n"
+    "  device SOFT $6 (A=$1,C=$4) (A=0,P=0);\n"
+    "  device SOFT $7 (A=$5,C=$4) (A=0,P=0);\n"
+    "end;\n"
+  );
+
+  //  compare the collected test data
+
+  std::string au = tl::testdata ();
+  au = tl::combine_path (au, "algo");
+  au = tl::combine_path (au, "multipolygon_terminals_soft_au.gds");
 
   db::compare_layouts (_this, ly, au);
 }
