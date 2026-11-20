@@ -1,6 +1,6 @@
 
 TARGET = mroom
-DESTDIR = $$OUT_PWD/../../../../db_plugins
+DESTDIR = $$clean_path($$PWD/../../../../../bin-release/db_plugins)
 
 exists($$PWD/local.pri) {
   include($$PWD/local.pri)

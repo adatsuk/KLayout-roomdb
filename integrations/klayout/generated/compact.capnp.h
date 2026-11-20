@@ -41,7 +41,7 @@ struct CompactRectArray {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(ae1aea2873409447, 7, 0)
+    CAPNP_DECLARE_STRUCT_HEADER(ae1aea2873409447, 10, 0)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -56,7 +56,7 @@ struct CompactRectGroup {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(8c1e2260b9ef628a, 2, 2)
+    CAPNP_DECLARE_STRUCT_HEADER(8c1e2260b9ef628a, 3, 2)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -71,7 +71,7 @@ struct CompactPolygonRepeat {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(c88296998a35a80a, 1, 3)
+    CAPNP_DECLARE_STRUCT_HEADER(c88296998a35a80a, 6, 3)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -86,7 +86,7 @@ struct CompactPathRepeat {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(a0dda7b37ee1e085, 1, 3)
+    CAPNP_DECLARE_STRUCT_HEADER(a0dda7b37ee1e085, 8, 3)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -101,7 +101,7 @@ struct CompactLayerShapes {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(c0854c926e42f5d8, 1, 18)
+    CAPNP_DECLARE_STRUCT_HEADER(c0854c926e42f5d8, 1, 22)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -158,6 +158,12 @@ public:
 
   inline  ::int64_t getStepY() const;
 
+  inline  ::int64_t getColY() const;
+
+  inline  ::int64_t getRowX() const;
+
+  inline bool getMemberProperties() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -209,6 +215,15 @@ public:
 
   inline  ::int64_t getStepY();
   inline void setStepY( ::int64_t value);
+
+  inline  ::int64_t getColY();
+  inline void setColY( ::int64_t value);
+
+  inline  ::int64_t getRowX();
+  inline void setRowX( ::int64_t value);
+
+  inline bool getMemberProperties();
+  inline void setMemberProperties(bool value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -263,6 +278,8 @@ public:
   inline bool hasLly() const;
   inline  ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>::Reader getLly() const;
 
+  inline bool getMemberProperties() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -312,6 +329,9 @@ public:
   inline  ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>::Builder initLly(unsigned int size);
   inline void adoptLly(::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>&& value);
   inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> disownLly();
+
+  inline bool getMemberProperties();
+  inline void setMemberProperties(bool value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -366,6 +386,20 @@ public:
 
   inline bool hasOriginY() const;
   inline  ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>::Reader getOriginY() const;
+
+  inline  ::uint32_t getColumns() const;
+
+  inline  ::uint32_t getRows() const;
+
+  inline  ::int64_t getStepX() const;
+
+  inline  ::int64_t getStepY() const;
+
+  inline  ::int64_t getColY() const;
+
+  inline  ::int64_t getRowX() const;
+
+  inline bool getMemberProperties() const;
 
 private:
   ::capnp::_::StructReader _reader;
@@ -422,6 +456,27 @@ public:
   inline void adoptOriginY(::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>&& value);
   inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> disownOriginY();
 
+  inline  ::uint32_t getColumns();
+  inline void setColumns( ::uint32_t value);
+
+  inline  ::uint32_t getRows();
+  inline void setRows( ::uint32_t value);
+
+  inline  ::int64_t getStepX();
+  inline void setStepX( ::int64_t value);
+
+  inline  ::int64_t getStepY();
+  inline void setStepY( ::int64_t value);
+
+  inline  ::int64_t getColY();
+  inline void setColY( ::int64_t value);
+
+  inline  ::int64_t getRowX();
+  inline void setRowX( ::int64_t value);
+
+  inline bool getMemberProperties();
+  inline void setMemberProperties(bool value);
+
 private:
   ::capnp::_::StructBuilder _builder;
   template <typename, ::capnp::Kind>
@@ -477,6 +532,26 @@ public:
 
   inline bool hasOriginY() const;
   inline  ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>::Reader getOriginY() const;
+
+  inline  ::int32_t getBgnExt() const;
+
+  inline  ::int32_t getEndExt() const;
+
+  inline bool getRound() const;
+
+  inline  ::uint32_t getColumns() const;
+
+  inline  ::uint32_t getRows() const;
+
+  inline  ::int64_t getStepX() const;
+
+  inline  ::int64_t getStepY() const;
+
+  inline  ::int64_t getColY() const;
+
+  inline  ::int64_t getRowX() const;
+
+  inline bool getMemberProperties() const;
 
 private:
   ::capnp::_::StructReader _reader;
@@ -535,6 +610,36 @@ public:
   inline  ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>::Builder initOriginY(unsigned int size);
   inline void adoptOriginY(::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>&& value);
   inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> disownOriginY();
+
+  inline  ::int32_t getBgnExt();
+  inline void setBgnExt( ::int32_t value);
+
+  inline  ::int32_t getEndExt();
+  inline void setEndExt( ::int32_t value);
+
+  inline bool getRound();
+  inline void setRound(bool value);
+
+  inline  ::uint32_t getColumns();
+  inline void setColumns( ::uint32_t value);
+
+  inline  ::uint32_t getRows();
+  inline void setRows( ::uint32_t value);
+
+  inline  ::int64_t getStepX();
+  inline void setStepX( ::int64_t value);
+
+  inline  ::int64_t getStepY();
+  inline void setStepY( ::int64_t value);
+
+  inline  ::int64_t getColY();
+  inline void setColY( ::int64_t value);
+
+  inline  ::int64_t getRowX();
+  inline void setRowX( ::int64_t value);
+
+  inline bool getMemberProperties();
+  inline void setMemberProperties(bool value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -634,6 +739,18 @@ public:
 
   inline bool hasPathDeltasPacked() const;
   inline  ::capnp::Data::Reader getPathDeltasPacked() const;
+
+  inline bool hasPathBgnExt() const;
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader getPathBgnExt() const;
+
+  inline bool hasPathEndExt() const;
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader getPathEndExt() const;
+
+  inline bool hasPathRound() const;
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader getPathRound() const;
+
+  inline bool hasRectCoordsPacked() const;
+  inline  ::capnp::Data::Reader getRectCoordsPacked() const;
 
 private:
   ::capnp::_::StructReader _reader;
@@ -802,6 +919,37 @@ public:
   inline  ::capnp::Data::Builder initPathDeltasPacked(unsigned int size);
   inline void adoptPathDeltasPacked(::capnp::Orphan< ::capnp::Data>&& value);
   inline ::capnp::Orphan< ::capnp::Data> disownPathDeltasPacked();
+
+  inline bool hasPathBgnExt();
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder getPathBgnExt();
+  inline void setPathBgnExt( ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setPathBgnExt(::kj::ArrayPtr<const  ::int32_t> value);
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder initPathBgnExt(unsigned int size);
+  inline void adoptPathBgnExt(::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>> disownPathBgnExt();
+
+  inline bool hasPathEndExt();
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder getPathEndExt();
+  inline void setPathEndExt( ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setPathEndExt(::kj::ArrayPtr<const  ::int32_t> value);
+  inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder initPathEndExt(unsigned int size);
+  inline void adoptPathEndExt(::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>> disownPathEndExt();
+
+  inline bool hasPathRound();
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder getPathRound();
+  inline void setPathRound( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value);
+  inline void setPathRound(::kj::ArrayPtr<const bool> value);
+  inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder initPathRound(unsigned int size);
+  inline void adoptPathRound(::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value);
+  inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> disownPathRound();
+
+  inline bool hasRectCoordsPacked();
+  inline  ::capnp::Data::Builder getRectCoordsPacked();
+  inline void setRectCoordsPacked( ::capnp::Data::Reader value);
+  inline  ::capnp::Data::Builder initRectCoordsPacked(unsigned int size);
+  inline void adoptRectCoordsPacked(::capnp::Orphan< ::capnp::Data>&& value);
+  inline ::capnp::Orphan< ::capnp::Data> disownRectCoordsPacked();
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -1055,6 +1203,48 @@ inline void CompactRectArray::Builder::setStepY( ::int64_t value) {
       ::capnp::bounded<6>() * ::capnp::ELEMENTS, value);
 }
 
+inline  ::int64_t CompactRectArray::Reader::getColY() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactRectArray::Builder::getColY() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS);
+}
+inline void CompactRectArray::Builder::setColY( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactRectArray::Reader::getRowX() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<8>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactRectArray::Builder::getRowX() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<8>() * ::capnp::ELEMENTS);
+}
+inline void CompactRectArray::Builder::setRowX( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<8>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CompactRectArray::Reader::getMemberProperties() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<576>() * ::capnp::ELEMENTS, true);
+}
+
+inline bool CompactRectArray::Builder::getMemberProperties() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<576>() * ::capnp::ELEMENTS, true);
+}
+inline void CompactRectArray::Builder::setMemberProperties(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<576>() * ::capnp::ELEMENTS, value, true);
+}
+
 inline  ::int64_t CompactRectGroup::Reader::getWidth() const {
   return _reader.getDataField< ::int64_t>(
       ::capnp::bounded<0>() * ::capnp::ELEMENTS);
@@ -1157,6 +1347,20 @@ inline void CompactRectGroup::Builder::adoptLly(
 inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> CompactRectGroup::Builder::disownLly() {
   return ::capnp::_::PointerHelpers< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
       ::capnp::bounded<1>() * ::capnp::POINTERS));
+}
+
+inline bool CompactRectGroup::Reader::getMemberProperties() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS, true);
+}
+
+inline bool CompactRectGroup::Builder::getMemberProperties() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS, true);
+}
+inline void CompactRectGroup::Builder::setMemberProperties(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS, value, true);
 }
 
 inline  ::uint32_t CompactPolygonRepeat::Reader::getVertexCount() const {
@@ -1285,6 +1489,104 @@ inline void CompactPolygonRepeat::Builder::adoptOriginY(
 inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> CompactPolygonRepeat::Builder::disownOriginY() {
   return ::capnp::_::PointerHelpers< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
       ::capnp::bounded<2>() * ::capnp::POINTERS));
+}
+
+inline  ::uint32_t CompactPolygonRepeat::Reader::getColumns() const {
+  return _reader.getDataField< ::uint32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint32_t CompactPolygonRepeat::Builder::getColumns() {
+  return _builder.getDataField< ::uint32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setColumns( ::uint32_t value) {
+  _builder.setDataField< ::uint32_t>(
+      ::capnp::bounded<1>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::uint32_t CompactPolygonRepeat::Reader::getRows() const {
+  return _reader.getDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint32_t CompactPolygonRepeat::Builder::getRows() {
+  return _builder.getDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setRows( ::uint32_t value) {
+  _builder.setDataField< ::uint32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Reader::getStepX() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Builder::getStepX() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setStepX( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Reader::getStepY() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Builder::getStepY() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setStepY( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Reader::getColY() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Builder::getColY() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setColY( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Reader::getRowX() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPolygonRepeat::Builder::getRowX() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+inline void CompactPolygonRepeat::Builder::setRowX( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CompactPolygonRepeat::Reader::getMemberProperties() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<96>() * ::capnp::ELEMENTS, true);
+}
+
+inline bool CompactPolygonRepeat::Builder::getMemberProperties() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<96>() * ::capnp::ELEMENTS, true);
+}
+inline void CompactPolygonRepeat::Builder::setMemberProperties(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<96>() * ::capnp::ELEMENTS, value, true);
 }
 
 inline  ::uint32_t CompactPathRepeat::Reader::getWidth() const {
@@ -1427,6 +1729,146 @@ inline void CompactPathRepeat::Builder::adoptOriginY(
 inline ::capnp::Orphan< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>> CompactPathRepeat::Builder::disownOriginY() {
   return ::capnp::_::PointerHelpers< ::capnp::List< ::int64_t,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
       ::capnp::bounded<2>() * ::capnp::POINTERS));
+}
+
+inline  ::int32_t CompactPathRepeat::Reader::getBgnExt() const {
+  return _reader.getDataField< ::int32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int32_t CompactPathRepeat::Builder::getBgnExt() {
+  return _builder.getDataField< ::int32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setBgnExt( ::int32_t value) {
+  _builder.setDataField< ::int32_t>(
+      ::capnp::bounded<2>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int32_t CompactPathRepeat::Reader::getEndExt() const {
+  return _reader.getDataField< ::int32_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int32_t CompactPathRepeat::Builder::getEndExt() {
+  return _builder.getDataField< ::int32_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setEndExt( ::int32_t value) {
+  _builder.setDataField< ::int32_t>(
+      ::capnp::bounded<3>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CompactPathRepeat::Reader::getRound() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS);
+}
+
+inline bool CompactPathRepeat::Builder::getRound() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setRound(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<128>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::uint32_t CompactPathRepeat::Reader::getColumns() const {
+  return _reader.getDataField< ::uint32_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint32_t CompactPathRepeat::Builder::getColumns() {
+  return _builder.getDataField< ::uint32_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setColumns( ::uint32_t value) {
+  _builder.setDataField< ::uint32_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::uint32_t CompactPathRepeat::Reader::getRows() const {
+  return _reader.getDataField< ::uint32_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint32_t CompactPathRepeat::Builder::getRows() {
+  return _builder.getDataField< ::uint32_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setRows( ::uint32_t value) {
+  _builder.setDataField< ::uint32_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPathRepeat::Reader::getStepX() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPathRepeat::Builder::getStepX() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setStepX( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<4>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPathRepeat::Reader::getStepY() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPathRepeat::Builder::getStepY() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setStepY( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<5>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPathRepeat::Reader::getColY() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPathRepeat::Builder::getColY() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setColY( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS, value);
+}
+
+inline  ::int64_t CompactPathRepeat::Reader::getRowX() const {
+  return _reader.getDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS);
+}
+
+inline  ::int64_t CompactPathRepeat::Builder::getRowX() {
+  return _builder.getDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS);
+}
+inline void CompactPathRepeat::Builder::setRowX( ::int64_t value) {
+  _builder.setDataField< ::int64_t>(
+      ::capnp::bounded<7>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool CompactPathRepeat::Reader::getMemberProperties() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<129>() * ::capnp::ELEMENTS, true);
+}
+
+inline bool CompactPathRepeat::Builder::getMemberProperties() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<129>() * ::capnp::ELEMENTS, true);
+}
+inline void CompactPathRepeat::Builder::setMemberProperties(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<129>() * ::capnp::ELEMENTS, value, true);
 }
 
 inline  ::uint32_t CompactLayerShapes::Reader::getLayerId() const {
@@ -2097,6 +2539,154 @@ inline void CompactLayerShapes::Builder::adoptPathDeltasPacked(
 inline ::capnp::Orphan< ::capnp::Data> CompactLayerShapes::Builder::disownPathDeltasPacked() {
   return ::capnp::_::PointerHelpers< ::capnp::Data>::disown(_builder.getPointerField(
       ::capnp::bounded<17>() * ::capnp::POINTERS));
+}
+
+inline bool CompactLayerShapes::Reader::hasPathBgnExt() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS).isNull();
+}
+inline bool CompactLayerShapes::Builder::hasPathBgnExt() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader CompactLayerShapes::Reader::getPathBgnExt() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::getPathBgnExt() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS));
+}
+inline void CompactLayerShapes::Builder::setPathBgnExt( ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS), value);
+}
+inline void CompactLayerShapes::Builder::setPathBgnExt(::kj::ArrayPtr<const  ::int32_t> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::initPathBgnExt(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS), size);
+}
+inline void CompactLayerShapes::Builder::adoptPathBgnExt(
+    ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>> CompactLayerShapes::Builder::disownPathBgnExt() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<18>() * ::capnp::POINTERS));
+}
+
+inline bool CompactLayerShapes::Reader::hasPathEndExt() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS).isNull();
+}
+inline bool CompactLayerShapes::Builder::hasPathEndExt() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader CompactLayerShapes::Reader::getPathEndExt() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::getPathEndExt() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS));
+}
+inline void CompactLayerShapes::Builder::setPathEndExt( ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS), value);
+}
+inline void CompactLayerShapes::Builder::setPathEndExt(::kj::ArrayPtr<const  ::int32_t> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::initPathEndExt(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS), size);
+}
+inline void CompactLayerShapes::Builder::adoptPathEndExt(
+    ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>> CompactLayerShapes::Builder::disownPathEndExt() {
+  return ::capnp::_::PointerHelpers< ::capnp::List< ::int32_t,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<19>() * ::capnp::POINTERS));
+}
+
+inline bool CompactLayerShapes::Reader::hasPathRound() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS).isNull();
+}
+inline bool CompactLayerShapes::Builder::hasPathRound() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader CompactLayerShapes::Reader::getPathRound() const {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_reader.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS));
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::getPathRound() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::get(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS));
+}
+inline void CompactLayerShapes::Builder::setPathRound( ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS), value);
+}
+inline void CompactLayerShapes::Builder::setPathRound(::kj::ArrayPtr<const bool> value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::set(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>::Builder CompactLayerShapes::Builder::initPathRound(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::init(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS), size);
+}
+inline void CompactLayerShapes::Builder::adoptPathRound(
+    ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::adopt(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>> CompactLayerShapes::Builder::disownPathRound() {
+  return ::capnp::_::PointerHelpers< ::capnp::List<bool,  ::capnp::Kind::PRIMITIVE>>::disown(_builder.getPointerField(
+      ::capnp::bounded<20>() * ::capnp::POINTERS));
+}
+
+inline bool CompactLayerShapes::Reader::hasRectCoordsPacked() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS).isNull();
+}
+inline bool CompactLayerShapes::Builder::hasRectCoordsPacked() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::Data::Reader CompactLayerShapes::Reader::getRectCoordsPacked() const {
+  return ::capnp::_::PointerHelpers< ::capnp::Data>::get(_reader.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS));
+}
+inline  ::capnp::Data::Builder CompactLayerShapes::Builder::getRectCoordsPacked() {
+  return ::capnp::_::PointerHelpers< ::capnp::Data>::get(_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS));
+}
+inline void CompactLayerShapes::Builder::setRectCoordsPacked( ::capnp::Data::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::Data>::set(_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::Data::Builder CompactLayerShapes::Builder::initRectCoordsPacked(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::Data>::init(_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS), size);
+}
+inline void CompactLayerShapes::Builder::adoptRectCoordsPacked(
+    ::capnp::Orphan< ::capnp::Data>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::Data>::adopt(_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::Data> CompactLayerShapes::Builder::disownRectCoordsPacked() {
+  return ::capnp::_::PointerHelpers< ::capnp::Data>::disown(_builder.getPointerField(
+      ::capnp::bounded<21>() * ::capnp::POINTERS));
 }
 
 inline bool CompactBlock::Reader::hasLayerShapes() const {
