@@ -1,6 +1,8 @@
 
 TARGET = mroom
-DESTDIR = $$clean_path($$PWD/../../../../../bin-release/db_plugins)
+# Keep KLayout's default plugin output dir (CI links -lklayout_* relative to it).
+# Override in local.pri for a custom DESTDIR (e.g. repo bin-release/db_plugins).
+DESTDIR = $$OUT_PWD/../../../../db_plugins
 
 exists($$PWD/local.pri) {
   include($$PWD/local.pri)

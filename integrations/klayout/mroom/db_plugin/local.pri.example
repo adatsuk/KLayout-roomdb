@@ -1,4 +1,7 @@
-# Copy to db_plugin/local.pri and set absolute paths on your machine.
-
-COMMONDB_ROOT = /path/to/CommonDB
-KLAYOUT_SRC = /path/to/KLayout/src
+# Copy to db_plugin/local.pri and set absolute paths on your machine.
+
+COMMONDB_ROOT = /path/to/Room
+KLAYOUT_SRC = /path/to/KLayout/src
+
+# Optional: override plugin output (default is KLayout build-tree db_plugins/).
+# DESTDIR = /path/to/KLayout/bin-release/db_plugins
