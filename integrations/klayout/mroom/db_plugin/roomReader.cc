@@ -22,6 +22,7 @@
 #include "tlString.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <limits>
 #include <map>
 #include <stdexcept>
@@ -46,6 +47,17 @@ db::Coord cast_coord (std::int64_t value)
 db::Point make_point (const room::Point &point)
 {
   return db::Point (cast_coord (point.x), cast_coord (point.y));
+}
+
+// Bench switch. Default keeps KLayout arrays. ROOM_EXPAND_ARRAYS=1 inserts each
+// placement as its own shape or instance so load time can be compared on the same file.
+bool expand_arrays ()
+{
+  static const bool enabled = [] () {
+    const char *env = std::getenv ("ROOM_EXPAND_ARRAYS");
+    return env != nullptr && env[0] == '1' && env[1] == '\0';
+  } ();
+  return enabled;
 }
 
 db::Box make_box (const room::Box &box)
@@ -235,6 +247,17 @@ void insert_box_grid (db::Shapes &shapes, db::Layout &layout,
     shapes.insert (box);
     return;
   }
+  if (expand_arrays ()) {
+    for (std::uint64_t col = 0; col < columns; ++col) {
+      for (std::uint64_t row = 0; row < rows; ++row) {
+        const std::int64_t dx = static_cast<std::int64_t> (col) * step_x + static_cast<std::int64_t> (row) * row_x;
+        const std::int64_t dy = static_cast<std::int64_t> (col) * col_y + static_cast<std::int64_t> (row) * step_y;
+        shapes.insert (db::Box (db::Point (cast_coord (llx + dx), cast_coord (lly + dy)),
+                                db::Point (cast_coord (llx + width + dx), cast_coord (lly + height + dy))));
+      }
+    }
+    return;
+  }
   shapes.insert (db::Shape::box_array_type (box, db::UnitTrans (), layout.array_repository (),
                                             db::Vector (cast_coord (step_x), cast_coord (col_y)),
                                             db::Vector (cast_coord (row_x), cast_coord (step_y)),
@@ -263,6 +286,13 @@ void insert_box_points (db::Shapes &shapes, db::Layout &layout, std::int64_t wid
   const std::size_t count = std::min (xs.size (), ys.size ());
   // Prefer iterated arrays even on editable layouts — expanding point clouds is ~2× slower
   // and loses to native GDS load on wafer-scale designs.
+  if (count > 1 && expand_arrays ()) {
+    for (std::size_t i = 0; i < count; ++i) {
+      shapes.insert (db::Box (db::Point (cast_coord (xs[i]), cast_coord (ys[i])),
+                              db::Point (cast_coord (xs[i] + width), cast_coord (ys[i] + height))));
+    }
+    return;
+  }
   if (count > 1) {
     const db::Coord x0 = cast_coord (xs.front ());
     const db::Coord y0 = cast_coord (ys.front ());
@@ -374,6 +404,18 @@ void insert_polygon_grid (db::Shapes &shapes, db::Layout &layout, const std::vec
     shapes.insert (polygon);
     return;
   }
+  if (expand_arrays ()) {
+    for (std::uint64_t col = 0; col < columns; ++col) {
+      for (std::uint64_t row = 0; row < rows; ++row) {
+        const std::int64_t dx = static_cast<std::int64_t> (col) * step_x + static_cast<std::int64_t> (row) * row_x;
+        const std::int64_t dy = static_cast<std::int64_t> (col) * col_y + static_cast<std::int64_t> (row) * step_y;
+        db::SimplePolygon placed = polygon;
+        placed.move (db::Vector (cast_coord (dx), cast_coord (dy)));
+        shapes.insert (placed);
+      }
+    }
+    return;
+  }
   shapes.insert (db::array<db::SimplePolygonPtr, db::Disp> (
     db::SimplePolygonPtr (polygon, layout.shape_repository ()),
     db::Disp (db::Vector (0, 0)),
@@ -407,6 +449,18 @@ void insert_path_grid (db::Shapes &shapes, db::Layout &layout, const room::Compa
   }
   if (columns == 1 && rows == 1) {
     shapes.insert (path);
+    return;
+  }
+  if (expand_arrays ()) {
+    for (std::uint64_t col = 0; col < columns; ++col) {
+      for (std::uint64_t row = 0; row < rows; ++row) {
+        const std::int64_t dx = static_cast<std::int64_t> (col) * step_x + static_cast<std::int64_t> (row) * row_x;
+        const std::int64_t dy = static_cast<std::int64_t> (col) * col_y + static_cast<std::int64_t> (row) * step_y;
+        db::Path placed = path;
+        placed.move (db::Vector (cast_coord (dx), cast_coord (dy)));
+        shapes.insert (placed);
+      }
+    }
     return;
   }
   shapes.insert (db::array<db::PathPtr, db::Disp> (
@@ -608,7 +662,16 @@ void Reader::do_read (db::Layout &layout)
     }
     db::Cell &target_cell = layout.cell (parent_it->second);
     const db::properties_id_type prop_id = properties_id_from_core (instance.properties);
-    if (prop_id == 0) {
+    if (expand_arrays () && arr.size () > 1) {
+      for (db::CellInstArray::iterator it = arr.begin (); ! it.at_end (); ++it) {
+        db::CellInstArray one (db::CellInst (child_it->second), *it);
+        if (prop_id == 0) {
+          target_cell.insert (one);
+        } else {
+          target_cell.insert (db::object_with_properties<db::CellInstArray> (one, prop_id));
+        }
+      }
+    } else if (prop_id == 0) {
       target_cell.insert (arr);
     } else {
       target_cell.insert (db::object_with_properties<db::CellInstArray> (arr, prop_id));
@@ -671,6 +734,16 @@ void Reader::do_read (db::Layout &layout)
       }
       db::SimplePolygon polygon;
       polygon.assign_hull (hull.begin (), hull.end ());
+      if (expand_arrays ()) {
+        const std::size_t n = std::min (repeat.originX.size (), repeat.originY.size ());
+        for (std::size_t i = 0; i < n; ++i) {
+          db::SimplePolygon placed = polygon;
+          placed.move (db::Vector (cast_coord (repeat.originX[i] - repeat.originX.front ()),
+                                   cast_coord (repeat.originY[i] - repeat.originY.front ())));
+          shapes->insert (placed);
+        }
+        return;
+      }
       const db::Vector place (polygon.box ().lower_left () - db::Point ());
       polygon.move (-place);
       const db::SimplePolygonPtr prototype (polygon, layout.shape_repository ());
@@ -712,6 +785,16 @@ void Reader::do_read (db::Layout &layout)
       path.extensions (cast_coord (repeat.bgnExt), cast_coord (repeat.endExt));
       if (repeat.round) {
         path.round (true);
+      }
+      if (expand_arrays ()) {
+        const std::size_t n = std::min (repeat.originX.size (), repeat.originY.size ());
+        for (std::size_t i = 0; i < n; ++i) {
+          db::Path placed = path;
+          placed.move (db::Vector (cast_coord (repeat.originX[i] - repeat.originX.front ()),
+                                   cast_coord (repeat.originY[i] - repeat.originY.front ())));
+          shapes->insert (placed);
+        }
+        return;
       }
       const db::Vector place (*path.begin () - db::Point ());
       path.move (-place);

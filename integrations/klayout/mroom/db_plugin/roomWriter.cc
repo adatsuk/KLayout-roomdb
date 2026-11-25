@@ -34,11 +34,18 @@
 #include <kj/io.h>
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
+#include <exception>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -48,7 +55,6 @@ namespace roomdb
 
 namespace {
 
-constexpr unsigned int k_oasis_compression_level = 2;
 constexpr bool k_oasis_recompress = false;
 
 std::int64_t cast_coord (db::Coord value)
@@ -156,8 +162,12 @@ int env_int (const char *name, int default_value)
   return static_cast<int> (value);
 }
 
-void write_database_to_stream (room::Database &database, tl::OutputStream &stream)
+void write_database_to_stream (room::Database &database, tl::OutputStream &stream,
+                                double &capnp_s, double &zlib_s)
 {
+  capnp_s = 0.0;
+  zlib_s = 0.0;
+  const auto capnp_started = std::chrono::steady_clock::now ();
   database.lib ().recomputeAllBBoxes ();
   database.lib ().refreshIndex ();
   database.setFileSummary (room::FileSummary::fromLib (database.lib (), room::ViewType::Layout));
@@ -167,6 +177,9 @@ void write_database_to_stream (room::Database &database, tl::OutputStream &strea
   //   ROOM_COMPRESS=0|1          whole-file ROOMZ zlib (default 1)
   //   ROOM_COMPRESS_LEVEL=0..9   zlib level (default 1 = Z_BEST_SPEED)
   //   ROOM_DETECT_REPETITION=0|1 second compact optimize (default 0)
+  //   ROOM_REP_LEVEL=0|2         LStream array search (default 2). 0 keeps arrays already
+  //                              present and does not search for new shape arrays.
+  //   ROOM_WRITE_THREADS=N       cells searched in parallel (default: half the logical processors)
   room::SaveOptions options;
   options.compactGeometry = true;
   options.detectRepetition = env_flag ("ROOM_DETECT_REPETITION", false);
@@ -175,14 +188,14 @@ void write_database_to_stream (room::Database &database, tl::OutputStream &strea
 
   capnp::MallocMessageBuilder message;
   writeDatabase (message.initRoot<room::schema::Database> (), database, options);
+  capnp_s = std::chrono::duration<double> (std::chrono::steady_clock::now () - capnp_started).count ();
 
   if (options.compressFile) {
-    kj::VectorOutputStream vector_stream;
-    capnp::writeMessage (vector_stream, message);
-    const kj::ArrayPtr<const kj::byte> bytes = vector_stream.getArray ();
+    const auto zlib_started = std::chrono::steady_clock::now ();
     const std::vector<std::uint8_t> framed =
-        room::compressRoomPayload (bytes.begin (), bytes.size (), options.compressLevel);
+        room::compressRoomMessage (message, options.compressLevel);
     stream.put_raw (reinterpret_cast<const char *> (framed.data ()), framed.size ());
+    zlib_s = std::chrono::duration<double> (std::chrono::steady_clock::now () - zlib_started).count ();
     return;
   }
 
@@ -190,6 +203,257 @@ void write_database_to_stream (room::Database &database, tl::OutputStream &strea
   // (no intermediate full-file VectorOutputStream copy).
   TlKjOutputStream adapter (stream);
   capnp::writeMessage (adapter, message);
+}
+
+void report_write_timing (const char *line)
+{
+  std::fputs (line, stderr);
+  std::fflush (stderr);
+  const char *path = std::getenv ("ROOM_TIMING_LOG");
+  if (path == nullptr || *path == '\0') {
+    return;
+  }
+  std::FILE *out = std::fopen (path, "a");
+  if (out == nullptr) {
+    return;
+  }
+  std::fputs (line, out);
+  std::fclose (out);
+}
+
+double seconds_since (std::chrono::steady_clock::time_point started)
+{
+  return std::chrono::duration<double> (std::chrono::steady_clock::now () - started).count ();
+}
+
+struct LayerJob
+{
+  unsigned int layer_index = 0;
+  db::LayerProperties properties;
+};
+
+struct CellJob
+{
+  db::cell_index_type cell_index = 0;
+  const char *cell_name = nullptr;
+  db::properties_id_type prop_id = 0;
+  std::vector<LayerJob> layers;
+};
+
+struct LayerOut
+{
+  db::LayerProperties properties;
+  lstr::Compressed compressed;
+};
+
+struct CellOut
+{
+  double search_s = 0.0;
+  std::vector<LayerOut> layers;
+  lstr::Compressed instances;
+};
+
+CellOut compress_cell_job (const db::Layout &layout, const CellJob &job,
+                           const std::set<db::cell_index_type> &cells_to_write,
+                           unsigned int rep_level)
+{
+  CellOut out;
+  const db::Cell &cell = layout.cell (job.cell_index);
+  out.layers.reserve (job.layers.size ());
+  for (const LayerJob &layer : job.layers) {
+    LayerOut layer_out;
+    layer_out.properties = layer.properties;
+    const auto started = std::chrono::steady_clock::now ();
+    layer_out.compressed.compress_shapes (cell.shapes (layer.layer_index), rep_level, k_oasis_recompress);
+    out.search_s += seconds_since (started);
+    out.layers.push_back (std::move (layer_out));
+  }
+
+  const auto started = std::chrono::steady_clock::now ();
+  out.instances.compress_instances (cell.begin (), cells_to_write, rep_level);
+  out.search_s += seconds_since (started);
+  return out;
+}
+
+void emit_compressed_shapes (room::Block &block, std::uint32_t layer_id, lstr::Compressed &compressed);
+void emit_compressed_instances (room::Block &block, const db::Layout &layout, lstr::Compressed &compressed);
+
+void emit_compressed_cell (room::Database &database, const db::Layout &layout, double dbu_per_micron,
+                           const CellJob &job, CellOut &cell_out, double &block_s)
+{
+  room::Cell &core_cell = database.lib ().getOrCreateCell (job.cell_name);
+  core_cell.properties () = properties_from_klayout (job.prop_id);
+  room::CellContent &content = core_cell.getOrCreateContent (room::ViewType::Layout, dbu_per_micron);
+  content.setDbuPerMicron (dbu_per_micron);
+  content.layers ().clear ();
+
+  auto layer_id_for = [&content, &database] (const db::LayerProperties &properties) -> std::uint32_t {
+    return findOrAddViewLayer (content, layer_spec_from_properties (properties), database.lib ().layers ());
+  };
+
+  for (LayerOut &layer_out : cell_out.layers) {
+    const std::uint32_t layer_id = layer_id_for (layer_out.properties);
+    const auto started = std::chrono::steady_clock::now ();
+    emit_compressed_shapes (content.block (), layer_id, layer_out.compressed);
+    block_s += seconds_since (started);
+  }
+
+  {
+    const auto started = std::chrono::steady_clock::now ();
+    emit_compressed_instances (content.block (), layout, cell_out.instances);
+    block_s += seconds_since (started);
+  }
+
+  {
+    const auto started = std::chrono::steady_clock::now ();
+    content.block ().recomputeBBox ();
+    block_s += seconds_since (started);
+  }
+}
+
+struct WorkItem
+{
+  std::size_t cell = 0;
+  int layer = -1;
+};
+
+struct CellSlot
+{
+  CellOut out;
+  int remaining = 0;
+  double search_s = 0.0;
+  double wall0 = -1.0;
+  double wall1 = 0.0;
+};
+
+struct ParallelCompress
+{
+  const db::Layout *layout = nullptr;
+  const std::vector<CellJob> *jobs = nullptr;
+  const std::vector<WorkItem> *tasks = nullptr;
+  std::vector<CellSlot> *cellBins = nullptr;
+  const std::set<db::cell_index_type> *cells_to_write = nullptr;
+  unsigned int rep_level = 2;
+  std::mutex mu;
+  std::condition_variable cv;
+  std::vector<std::unique_ptr<CellOut>> done;
+  std::vector<double> finished_at;
+  std::size_t next_task = 0;
+  std::size_t next_emit = 0;
+  double max_piece_s = 0.0;
+  bool stop = false;
+  std::exception_ptr error;
+  std::chrono::steady_clock::time_point started;
+};
+
+void compress_worker (ParallelCompress &state)
+{
+  try {
+    for (;;) {
+      WorkItem item;
+      {
+        std::unique_lock<std::mutex> lock (state.mu);
+        state.cv.wait (lock, [&] {
+          return state.stop || state.error || state.next_task < state.tasks->size ();
+        });
+        if (state.stop || state.error || state.next_task >= state.tasks->size ()) {
+          return;
+        }
+        item = (*state.tasks)[state.next_task++];
+      }
+
+      const CellJob &job = (*state.jobs)[item.cell];
+      const db::Cell &cell = state.layout->cell (job.cell_index);
+      const double began = seconds_since (state.started);
+      LayerOut layer_out;
+      lstr::Compressed instances;
+      if (item.layer < 0) {
+        instances.compress_instances (cell.begin (), *state.cells_to_write, state.rep_level);
+      } else {
+        const LayerJob &layer = job.layers[static_cast<std::size_t> (item.layer)];
+        layer_out.properties = layer.properties;
+        layer_out.compressed.compress_shapes (cell.shapes (layer.layer_index), state.rep_level, k_oasis_recompress);
+      }
+      const double ended = seconds_since (state.started);
+      const double piece_s = ended - began;
+
+      {
+        std::lock_guard<std::mutex> lock (state.mu);
+        CellSlot &slot = (*state.cellBins)[item.cell];
+        if (item.layer < 0) {
+          slot.out.instances = std::move (instances);
+        } else {
+          slot.out.layers[static_cast<std::size_t> (item.layer)] = std::move (layer_out);
+        }
+        slot.search_s += piece_s;
+        if (slot.wall0 < 0.0 || began < slot.wall0) {
+          slot.wall0 = began;
+        }
+        if (ended > slot.wall1) {
+          slot.wall1 = ended;
+        }
+        if (piece_s > state.max_piece_s) {
+          state.max_piece_s = piece_s;
+        }
+        slot.remaining -= 1;
+        if (slot.remaining == 0) {
+          slot.out.search_s = slot.search_s;
+          state.done[item.cell] = std::make_unique<CellOut> (std::move (slot.out));
+          state.finished_at[item.cell] = ended;
+        }
+      }
+      state.cv.notify_all ();
+    }
+  } catch (...) {
+    {
+      std::lock_guard<std::mutex> lock (state.mu);
+      if (! state.error) {
+        state.error = std::current_exception ();
+      }
+      state.stop = true;
+    }
+    state.cv.notify_all ();
+  }
+}
+
+struct ThreadJoin
+{
+  ParallelCompress &state;
+  std::vector<std::thread> &threads;
+
+  ~ThreadJoin ()
+  {
+    {
+      std::lock_guard<std::mutex> lock (state.mu);
+      state.stop = true;
+    }
+    state.cv.notify_all ();
+    for (std::thread &thread : threads) {
+      if (thread.joinable ()) {
+        thread.join ();
+      }
+    }
+  }
+};
+
+unsigned int write_thread_count (std::size_t jobs)
+{
+  if (jobs == 0) {
+    return 1;
+  }
+  const int requested = env_int ("ROOM_WRITE_THREADS", -1);
+  unsigned int count = 1;
+  if (requested < 0) {
+    // Hyperthreads made the array search slower on this host (8-way 22.2 s, 4-way 19.9 s).
+    const unsigned int hardware = std::thread::hardware_concurrency ();
+    count = hardware <= 1 ? 1 : hardware / 2;
+  } else if (requested > 1) {
+    count = static_cast<unsigned int> (requested);
+  }
+  if (count > jobs) {
+    count = static_cast<unsigned int> (jobs);
+  }
+  return count == 0 ? 1 : count;
 }
 
 std::string resolve_lib_name (const db::Layout &layout, const db::SaveLayoutOptions &options, const tl::OutputStream &stream)
@@ -531,6 +795,59 @@ void emit_instance (room::Block &block, const db::Layout &layout, const db::Cell
   }
 }
 
+void emit_shapes_keeping_arrays (room::Block &block, std::uint32_t layer_id, const db::Shapes &shapes)
+{
+  // Same transfer as LStream's in-array branch, without the neighbor search on loose shapes.
+  lstr::Compressed repetition;
+  for (db::ShapeIterator shape = shapes.begin (db::ShapeIterator::All); ! shape.at_end (); ) {
+    lstr::RegularArray regular;
+    std::vector<db::Vector> irregular;
+    const bool in_array = shape.in_array ();
+    if (in_array) {
+      repetition.create_repetition (shape.array (), regular, irregular);
+    }
+
+    RepMaps maps;
+    std::uint64_t rep_id = 0;
+    if (! regular.is_null () && (regular.na () > 1 || regular.nb () > 1)) {
+      maps.regular.emplace (1, regular);
+      rep_id = 1;
+    } else if (! irregular.empty ()) {
+      maps.irregular.emplace (1, &irregular);
+      rep_id = 1;
+    }
+
+    const db::properties_id_type prop_id = shape->prop_id ();
+    if (shape->is_box ()) {
+      db::Box box;
+      shape->instantiate (box);
+      emit_box (block, layer_id, box, prop_id, rep_id, maps);
+    } else if (shape->is_simple_polygon ()) {
+      db::SimplePolygon polygon;
+      shape->instantiate (polygon);
+      emit_polygon (block, layer_id, polygon_points (polygon), prop_id, rep_id, maps);
+    } else if (shape->is_polygon ()) {
+      db::Polygon polygon;
+      shape->instantiate (polygon);
+      emit_polygon (block, layer_id, polygon_points (polygon), prop_id, rep_id, maps);
+    } else if (shape->is_path ()) {
+      db::Path path;
+      shape->instantiate (path);
+      emit_path (block, layer_id, path, prop_id, rep_id, maps);
+    } else if (shape->is_text ()) {
+      db::Text text;
+      shape->instantiate (text);
+      emit_text_with_rep (block, layer_id, text, prop_id, rep_id, maps);
+    }
+
+    if (in_array) {
+      shape.finish_array ();
+    } else {
+      ++shape;
+    }
+  }
+}
+
 void emit_compressed_instances (room::Block &block, const db::Layout &layout, lstr::Compressed &compressed)
 {
   const RepMaps maps = build_rep_maps (compressed);
@@ -579,52 +896,166 @@ void Writer::write (db::Layout &layout, tl::OutputStream &stream, const db::Save
     cells_to_write.insert (cit->cell_index ());
   }
 
-  for (db::Layout::const_iterator cit = layout.begin (); cit != layout.end (); ++cit) {
-    const db::Cell &cell = *cit;
-    const db::cell_index_type cell_index = cell.cell_index ();
-    const char *cell_name = layout.cell_name (cell_index);
-    if (cell_name == nullptr || *cell_name == '\0') {
-      continue;
+  const int rep_level = env_int ("ROOM_REP_LEVEL", 2);
+  double search_cpu_s = 0.0;
+  double search_wall_s = 0.0;
+  double block_s = 0.0;
+  double max_cell_s = 0.0;
+  double max_piece_s = 0.0;
+  unsigned int threads_used = 1;
+
+  if (rep_level <= 0) {
+    // No shape-array search. Keep already stored arrays and emit on this thread.
+    for (db::Layout::const_iterator cit = layout.begin (); cit != layout.end (); ++cit) {
+      const db::Cell &cell = *cit;
+      const db::cell_index_type cell_index = cell.cell_index ();
+      const char *cell_name = layout.cell_name (cell_index);
+      if (cell_name == nullptr || *cell_name == '\0') {
+        continue;
+      }
+
+      room::Cell &core_cell = database.lib ().getOrCreateCell (cell_name);
+      core_cell.properties () = properties_from_klayout (cell.prop_id ());
+      room::CellContent &content = core_cell.getOrCreateContent (room::ViewType::Layout, dbu_per_micron);
+      content.setDbuPerMicron (dbu_per_micron);
+      content.layers ().clear ();
+
+      auto layer_id_for = [&content, &database] (const db::LayerProperties &properties) -> std::uint32_t {
+        return findOrAddViewLayer (content, layer_spec_from_properties (properties), database.lib ().layers ());
+      };
+
+      for (unsigned int li = 0; li < layout.layers (); ++li) {
+        if (! layout.is_valid_layer (li)) {
+          continue;
+        }
+        const db::LayerProperties &properties = layout.get_properties (li);
+        if (properties.layer < 0 || properties.datatype < 0) {
+          continue;
+        }
+        if (cell.shapes (li).empty ()) {
+          continue;
+        }
+        const std::uint32_t layer_id = layer_id_for (properties);
+        const auto started = std::chrono::steady_clock::now ();
+        emit_shapes_keeping_arrays (content.block (), layer_id, cell.shapes (li));
+        block_s += seconds_since (started);
+      }
+
+      {
+        // LStream level 0 drops instance arrays whose size is greater than 1.
+        lstr::Compressed compressed;
+        const auto started = std::chrono::steady_clock::now ();
+        compressed.compress_instances (cell.begin (), cells_to_write, 2u);
+        search_cpu_s += seconds_since (started);
+        const auto emit_started = std::chrono::steady_clock::now ();
+        emit_compressed_instances (content.block (), layout, compressed);
+        block_s += seconds_since (emit_started);
+      }
+
+      const auto bbox_started = std::chrono::steady_clock::now ();
+      content.block ().recomputeBBox ();
+      block_s += seconds_since (bbox_started);
+    }
+    search_wall_s = search_cpu_s;
+    max_cell_s = search_cpu_s;
+  } else {
+    std::vector<CellJob> jobs;
+    for (db::Layout::const_iterator cit = layout.begin (); cit != layout.end (); ++cit) {
+      const db::Cell &cell = *cit;
+      const char *cell_name = layout.cell_name (cell.cell_index ());
+      if (cell_name == nullptr || *cell_name == '\0') {
+        continue;
+      }
+      CellJob job;
+      job.cell_index = cell.cell_index ();
+      job.cell_name = cell_name;
+      job.prop_id = cell.prop_id ();
+      for (unsigned int li = 0; li < layout.layers (); ++li) {
+        if (! layout.is_valid_layer (li)) {
+          continue;
+        }
+        const db::LayerProperties &properties = layout.get_properties (li);
+        if (properties.layer < 0 || properties.datatype < 0 || cell.shapes (li).empty ()) {
+          continue;
+        }
+        LayerJob layer;
+        layer.layer_index = li;
+        layer.properties = properties;
+        job.layers.push_back (layer);
+      }
+      jobs.push_back (std::move (job));
     }
 
-    room::Cell &core_cell = database.lib ().getOrCreateCell (cell_name);
-    core_cell.properties () = properties_from_klayout (cell.prop_id ());
-    room::CellContent &content = core_cell.getOrCreateContent (room::ViewType::Layout, dbu_per_micron);
-    content.setDbuPerMicron (dbu_per_micron);
-    content.layers ().clear ();
-
-    auto layer_id_for = [&content, &database] (const db::LayerProperties &properties) -> std::uint32_t {
-      return findOrAddViewLayer (content, layer_spec_from_properties (properties), database.lib ().layers ());
-    };
-
-    for (unsigned int li = 0; li < layout.layers (); ++li) {
-      if (! layout.is_valid_layer (li)) {
-        continue;
+    threads_used = write_thread_count (jobs.size ());
+    std::vector<CellSlot> cellBins (jobs.size ());
+    std::vector<WorkItem> tasks;
+    for (std::size_t i = 0; i < jobs.size (); ++i) {
+      cellBins[i].out.layers.resize (jobs[i].layers.size ());
+      cellBins[i].remaining = static_cast<int> (jobs[i].layers.size ()) + 1;
+      for (std::size_t layer = 0; layer < jobs[i].layers.size (); ++layer) {
+        tasks.push_back (WorkItem { i, static_cast<int> (layer) });
       }
-      const db::LayerProperties &properties = layout.get_properties (li);
-      if (properties.layer < 0 || properties.datatype < 0) {
-        continue;
-      }
-      if (cell.shapes (li).empty ()) {
-        continue;
-      }
-
-      const std::uint32_t layer_id = layer_id_for (properties);
-      lstr::Compressed compressed;
-      compressed.compress_shapes (cell.shapes (li), k_oasis_compression_level, k_oasis_recompress);
-      emit_compressed_shapes (content.block (), layer_id, compressed);
+      tasks.push_back (WorkItem { i, -1 });
     }
+    ParallelCompress state;
+    state.layout = &layout;
+    state.jobs = &jobs;
+    state.tasks = &tasks;
+    state.cellBins = &cellBins;
+    state.cells_to_write = &cells_to_write;
+    state.rep_level = static_cast<unsigned int> (rep_level);
+    state.done.resize (jobs.size ());
+    state.finished_at.assign (jobs.size (), 0.0);
+    state.started = std::chrono::steady_clock::now ();
 
     {
-      lstr::Compressed compressed;
-      compressed.compress_instances (cell.begin (), cells_to_write, k_oasis_compression_level);
-      emit_compressed_instances (content.block (), layout, compressed);
-    }
+      std::vector<std::thread> threads;
+      threads.reserve (threads_used);
+      ThreadJoin join { state, threads };
+      for (unsigned int t = 0; t < threads_used; ++t) {
+        threads.emplace_back (compress_worker, std::ref (state));
+      }
 
-    content.block ().recomputeBBox ();
+      for (std::size_t i = 0; i < jobs.size (); ++i) {
+        std::unique_ptr<CellOut> out;
+        double finished_at = 0.0;
+        {
+          std::unique_lock<std::mutex> lock (state.mu);
+          state.cv.wait (lock, [&] { return state.error || state.done[i] != nullptr; });
+          if (state.error) {
+            break;
+          }
+          out = std::move (state.done[i]);
+          finished_at = state.finished_at[i];
+          state.next_emit = i + 1;
+        }
+        state.cv.notify_all ();
+
+        search_cpu_s += out->search_s;
+        const double cell_wall = cellBins[i].wall1 - cellBins[i].wall0;
+        if (cell_wall > max_cell_s) {
+          max_cell_s = cell_wall;
+        }
+        if (finished_at > search_wall_s) {
+          search_wall_s = finished_at;
+        }
+        emit_compressed_cell (database, layout, dbu_per_micron, jobs[i], *out, block_s);
+      }
+    }
+    max_piece_s = state.max_piece_s;
+    if (state.error) {
+      std::rethrow_exception (state.error);
+    }
   }
 
-  write_database_to_stream (database, stream);
+  double capnp_s = 0.0;
+  double zlib_s = 0.0;
+  write_database_to_stream (database, stream, capnp_s, zlib_s);
+  char timing_line[320];
+  std::snprintf (timing_line, sizeof (timing_line),
+                 "ROOM_WRITE_TIMING threads %u search_cpu_s %.3f search_wall_s %.3f max_cell_s %.3f max_piece_s %.3f block_s %.3f capnp_s %.3f zlib_s %.3f\n",
+                 threads_used, search_cpu_s, search_wall_s, max_cell_s, max_piece_s, block_s, capnp_s, zlib_s);
+  report_write_timing (timing_line);
 }
 
 } // namespace roomdb
