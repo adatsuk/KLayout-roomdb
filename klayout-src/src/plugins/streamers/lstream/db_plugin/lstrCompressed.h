@@ -204,6 +204,14 @@ public:
     return m_array_to_rep_id.size () + m_irregular_to_rep_id.size ();
   }
 
+  /**
+   *  @brief Decode an existing shape array into a regular or irregular repetition.
+   *
+   *  Used by mroom to keep KLayout arrays when writing ROOM without neighbor
+   *  recompression. Returns the displacement of the first element.
+   */
+  db::Vector create_repetition (const db::Shape &array, RegularArray &regular, std::vector<db::Vector> &irregular_array);
+
 protected:
   virtual void write (const db::Point &obj,                       const RegularArray &array, const disp_vector &irregular) { store (obj, array, irregular); }
   virtual void write (const db::PointWithProperties &obj,         const RegularArray &array, const disp_vector &irregular) { store (obj, array, irregular); }
@@ -272,7 +280,6 @@ private:
   std::map<std::vector<db::Vector>, uint64_t> m_irregular_to_rep_id;
 
   uint64_t make_rep_id (const RegularArray &array, const std::vector<db::Vector> &irregular);
-  db::Vector create_repetition (const db::Shape &array, RegularArray &regular, std::vector<db::Vector> &irregular_array);
   template <class Obj>
   void write_shape(const db::Shape &shape, RegularArray &regular, std::vector<db::Vector> &irregular_array);
 };
