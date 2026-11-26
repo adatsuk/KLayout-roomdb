@@ -8,14 +8,27 @@ dnf config-manager --set-enabled powertools 2>/dev/null \
   || true
 dnf install -y epel-release 2>/dev/null || true
 
-dnf install -y \
+# rockylinux:8 images often have BaseOS/AppStream skew (gcc wants newer libgcc).
+# Refresh toolchain libs first; fall back to --nobest if mirrors still disagree.
+dnf -y update libgcc libstdc++ libgomp || true
+if ! dnf install -y \
   gcc gcc-c++ make git which curl patchelf \
   autoconf automake libtool \
   python3 python3-devel \
   qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel \
   qt5-qtmultimedia-devel qt5-qtxmlpatterns-devel \
   zlib-devel libpng-devel libcurl-devel expat-devel \
-  libX11-devel libxcb-devel mesa-libGL-devel
+  libX11-devel libxcb-devel mesa-libGL-devel; then
+  echo "WARNING: dnf install failed; retrying with --nobest" >&2
+  dnf install -y --nobest \
+    gcc gcc-c++ make git which curl patchelf \
+    autoconf automake libtool \
+    python3 python3-devel \
+    qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel \
+    qt5-qtmultimedia-devel qt5-qtxmlpatterns-devel \
+    zlib-devel libpng-devel libcurl-devel expat-devel \
+    libX11-devel libxcb-devel mesa-libGL-devel
+fi
 
 # qmake from Qt5
 if command -v qmake-qt5 >/dev/null 2>&1; then
