@@ -53,24 +53,27 @@ jobs:
 
       - name: Smoke test ROOM load (Python / pya)
         env:
-          COMMONDB_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB
-          KLAYOUT: ${{ env.GITHUB_WORKSPACE }}/KLayout-roomdb/klayout-src/bin-release/klayout
+          COMMONDB_ROOT: ${{ github.workspace }}/CommonDB
+          KLAYOUT: ${{ github.workspace }}/KLayout-roomdb/klayout-src/bin-release/klayout
         run: |
           ROOM_PATH="$COMMONDB_ROOT/examples/gds_to_room/output/sample.room"
           if [[ ! -f "$ROOM_PATH" ]]; then
             echo "Skip smoke test: $ROOM_PATH not in CommonDB checkout"
             exit 0
           fi
-          "$KLAYOUT" -b -r "$GITHUB_WORKSPACE/KLayout-roomdb/scripts/test_room_load.py"
+          "$KLAYOUT" -b -r "${{ github.workspace }}/KLayout-roomdb/scripts/test_room_load.py"
 
       - name: Install linuxdeployqt
         run: bash KLayout-roomdb/scripts/ci_install_linuxdeployqt.sh
 
       - name: Package portable bundle
         env:
-          CAPNP_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB/third_party/capnp-install-linux
+          # Must be github.workspace — env.GITHUB_WORKSPACE is empty in expressions
+          # and silently dropped Cap'n Proto from the rocky8 artifact (libmroom unloadable).
+          CAPNP_ROOT: ${{ github.workspace }}/CommonDB/third_party/capnp-install-linux
           BUNDLE_SKIP_LINUXDEPLOYQT: "1"
         run: |
+          test -d "$CAPNP_ROOT/lib" || { echo "CAPNP_ROOT missing: $CAPNP_ROOT"; ls -la CommonDB/third_party || true; exit 1; }
           bash KLayout-roomdb/scripts/package_klayout_linux_bundle.sh \
             KLayout-roomdb/klayout-src/bin-release \
             KLayout-roomdb/klayout-rocky8-bundle.tar.gz \

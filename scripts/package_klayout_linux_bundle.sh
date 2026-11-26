@@ -21,16 +21,36 @@ mkdir -p "$STAGE" "$DIST"
 
 cp -a "$BIN_DIR"/. "$STAGE/"
 
-if [[ -n "$CAPNP_ROOT" && -d "$CAPNP_ROOT/lib" ]]; then
-    mkdir -p "$STAGE/lib"
-    cp -a "$CAPNP_ROOT/lib"/libkj*.so* "$STAGE/lib/" 2>/dev/null || true
-    cp -a "$CAPNP_ROOT/lib"/libcapnp*.so* "$STAGE/lib/" 2>/dev/null || true
+mkdir -p "$STAGE/lib"
+bundle_capnp_libs() {
+    local src="$1"
+    [[ -n "$src" && -d "$src" ]] || return 1
+    local n=0
+    local f
+    for f in "$src"/libkj*.so* "$src"/libcapnp*.so*; do
+        [[ -e "$f" ]] || continue
+        cp -a "$f" "$STAGE/lib/" || true
+        n=$((n + 1))
+    done
+    [[ "$n" -gt 0 ]]
+}
+
+# mroom links Cap'n Proto (SONAME libcapnp-*-dev.so / libkj-*-dev.so). Must ship in lib/.
+if [[ -n "$CAPNP_ROOT" ]]; then
+    if bundle_capnp_libs "$CAPNP_ROOT/lib"; then
+        echo "Bundled Cap'n Proto from CAPNP_ROOT=$CAPNP_ROOT"
+    else
+        echo "WARNING: CAPNP_ROOT=$CAPNP_ROOT has no libkj*/libcapnp* — will try ldd paths" >&2
+    fi
 fi
 
 QMAKE="$(command -v qmake-qt5 2>/dev/null || command -v qmake)"
 DEPLOY_LDPATH="${STAGE}:${STAGE}/db_plugins:${STAGE}/lay_plugins"
 if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
     DEPLOY_LDPATH="${DEPLOY_LDPATH}:${LD_LIBRARY_PATH}"
+fi
+if [[ -n "$CAPNP_ROOT" && -d "$CAPNP_ROOT/lib" ]]; then
+    DEPLOY_LDPATH="${CAPNP_ROOT}/lib:${DEPLOY_LDPATH}"
 fi
 DEPLOY_LDPATH="${DEPLOY_LDPATH}:/usr/lib64:/lib64:/usr/lib/x86_64-linux-gnu"
 export LD_LIBRARY_PATH="${STAGE}/lib:${DEPLOY_LDPATH}"
@@ -56,13 +76,12 @@ bundle_ldd() {
         local lib
         while IFS= read -r lib; do
             [[ -n "$lib" && -f "$lib" ]] || continue
-            # System libs stay on the host — except libpython, which Door macros need
-            # and which may be absent/mismatched on the install machine.
+            # System libs stay on the host — except python/capnp/kj/crypto that mroom/pya need.
             if [[ "$include_system_python" != "1" ]]; then
                 case "$lib" in
                     /lib/*|/lib64/*|/usr/lib/*|/usr/lib64/*)
                         case "$(basename "$lib")" in
-                            libpython*) ;;
+                            libpython*|libcapnp*|libkj*|libcrypto.so*) ;;
                             *) continue ;;
                         esac
                         ;;
@@ -81,6 +100,21 @@ bundle_ldd() {
         cp -Ln "$py" "$STAGE/lib/" 2>/dev/null || cp -L "$py" "$STAGE/lib/" || true
         echo "Bundled Python: $(basename "$py")"
     done < <(ldd "$STAGE/klayout" 2>/dev/null | awk '/libpython/ {print $3}' || true)
+    # Cap'n Proto: also chase unresolved sonames via ldconfig / CAPNP_ROOT.
+    local miss
+    while IFS= read -r miss; do
+        [[ -n "$miss" ]] || continue
+        local hit=""
+        if [[ -n "$CAPNP_ROOT" && -e "$CAPNP_ROOT/lib/$miss" ]]; then
+            hit="$CAPNP_ROOT/lib/$miss"
+        else
+            hit="$(ldconfig -p 2>/dev/null | awk -v n="$miss" '$1 == n {print $NF; exit}')"
+        fi
+        if [[ -n "$hit" && -f "$hit" ]]; then
+            cp -Ln "$hit" "$STAGE/lib/" 2>/dev/null || cp -L "$hit" "$STAGE/lib/" || true
+            echo "Bundled Cap'n Proto dep: $(basename "$hit")"
+        fi
+    done < <(ldd "$STAGE/db_plugins/libmroom.so" 2>/dev/null | awk '/not found/ {print $1}' || true)
     QT_PLUGINS="$(qmake -query QT_INSTALL_PLUGINS 2>/dev/null || true)"
     if [[ -n "$QT_PLUGINS" && -d "$QT_PLUGINS" ]]; then
         cp -a "$QT_PLUGINS" "$STAGE/"
@@ -105,6 +139,21 @@ if command -v patchelf >/dev/null 2>&1; then
     patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins:$ORIGIN/lay_plugins' "$DIST/klayout" || true
     patch_plugin_rpath "$DIST/db_plugins/libmroom.so"
     patch_plugin_rpath "$DIST/lay_plugins/libmroom_ui.so"
+fi
+
+# Fail the package step if mroom still cannot resolve Cap'n Proto — Door hosts
+# will otherwise show "Unable to load plugin: libmroom.so".
+if [[ -f "$DIST/db_plugins/libmroom.so" ]]; then
+    export LD_LIBRARY_PATH="$DIST:$DIST/lib:$DIST/db_plugins:$DIST/lay_plugins${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    missing="$(ldd "$DIST/db_plugins/libmroom.so" 2>/dev/null | awk '/not found/ {print $1}' || true)"
+    if [[ -n "$missing" ]]; then
+        echo "ERROR: libmroom.so has unresolved deps after packaging:" >&2
+        echo "$missing" >&2
+        echo "CAPNP_ROOT=${CAPNP_ROOT:-<unset>}" >&2
+        ls -la "${CAPNP_ROOT:-/nonexistent}/lib" 2>&1 | head -40 >&2 || true
+        exit 1
+    fi
+    echo "OK: libmroom.so dependencies resolved in bundle"
 fi
 
 cat >"$DIST/klayout-run.sh" <<'EOF'
