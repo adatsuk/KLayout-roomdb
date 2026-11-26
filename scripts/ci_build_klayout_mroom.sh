@@ -29,13 +29,22 @@ bash "$ROOT/scripts/setup_klayout_mroom.sh" "$KLAYOUT"
   cd "$KLAYOUT"
   # Door drives KLayout with Python macros (pya / -rr *.py). Keep -noruby to
   # shrink the build, but Python bindings are required.
-  # Prefer python3.12 on Rocky (python3 alone may resolve to 3.6).
-  py=python3
-  if command -v python3.12 >/dev/null 2>&1; then
-    py=python3.12
-  elif command -v python3.11 >/dev/null 2>&1; then
-    py=python3.11
-  fi
+  # Pick a python that has both the interpreter and headers (Python.h).
+  # On Rocky 8, a bare `python3.12` binary may exist without -devel.
+  pick_python() {
+    local c inc
+    for c in python3.12 python3.11 python3.9 python3.8 python3; do
+      command -v "$c" >/dev/null 2>&1 || continue
+      inc="$("$c" -c 'import sysconfig; print(sysconfig.get_path("include"))' 2>/dev/null || true)"
+      if [[ -n "$inc" && -f "$inc/Python.h" ]]; then
+        echo "$c"
+        return 0
+      fi
+    done
+    echo python3
+  }
+  py="$(pick_python)"
+  echo "Building KLayout with Python: $py ($("$py" -V 2>&1))"
   bash build.sh -build build-release -bin bin-release -noruby -nolibgit2 \
     -python "$py" -option "-j${JOBS}"
 )
