@@ -118,16 +118,12 @@ while [[ -L "$_src" ]]; do
   [[ "$_src" != /* ]] && _src="$_dir/$_src"
 done
 DIR="$(cd -P "$(dirname "$_src")" && pwd)"
-export LD_LIBRARY_PATH="$DIR/lib:$DIR/db_plugins:$DIR/lay_plugins${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# $DIR first: libklayout_*.so and plugins live next to the binary, not only in lib/.
+export LD_LIBRARY_PATH="$DIR:$DIR/lib:$DIR/db_plugins:$DIR/lay_plugins${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="$DIR/plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
-# Help pya find the bundled libpython when the host Python differs.
-if [[ -z "${PYTHONHOME:-}" ]]; then
-  for _py in "$DIR/lib"/libpython*.so*; do
-    if [[ -e "$_py" ]]; then
-      export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
-      break
-    fi
-  done
+# pymod/pya is required for `import pya` (Door -rr macros).
+if [[ -d "$DIR/pymod" ]]; then
+  export PYTHONPATH="$DIR/pymod${PYTHONPATH:+:$PYTHONPATH}"
 fi
 cd "$DIR"
 exec "$DIR/klayout" "$@"
@@ -142,7 +138,7 @@ Run: ./klayout-run.sh [file.layout.room]
 
 Requires: Linux x86_64 with glibc 2.28+ (RHEL 8 / Rocky Linux 8 / AlmaLinux 8).
 Includes mroom streamer for .room / *.layout.room files.
-Includes Python (pya) for Door macros (-rr).
+Includes Python (pya) for Door macros (-rr); pymod/ is on PYTHONPATH.
 EOF
 
 rm -rf "$STAGE"

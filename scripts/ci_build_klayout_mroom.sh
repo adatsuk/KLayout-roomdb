@@ -29,7 +29,15 @@ bash "$ROOT/scripts/setup_klayout_mroom.sh" "$KLAYOUT"
   cd "$KLAYOUT"
   # Door drives KLayout with Python macros (pya / -rr *.py). Keep -noruby to
   # shrink the build, but Python bindings are required.
-  bash build.sh -build build-release -bin bin-release -noruby -nolibgit2 -option "-j${JOBS}"
+  # Prefer python3.12 on Rocky (python3 alone may resolve to 3.6).
+  py=python3
+  if command -v python3.12 >/dev/null 2>&1; then
+    py=python3.12
+  elif command -v python3.11 >/dev/null 2>&1; then
+    py=python3.11
+  fi
+  bash build.sh -build build-release -bin bin-release -noruby -nolibgit2 \
+    -python "$py" -option "-j${JOBS}"
 )
 
 bash "$ROOT/scripts/verify_klayout_mroom.sh" "$KLAYOUT"
