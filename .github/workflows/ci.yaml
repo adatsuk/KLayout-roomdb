@@ -51,7 +51,7 @@ jobs:
           sed -i 's/\r$//' KLayout-roomdb/scripts/ci_build_klayout_mroom.sh
           bash KLayout-roomdb/scripts/ci_build_klayout_mroom.sh "$GITHUB_WORKSPACE"
 
-      - name: Smoke test ROOM load
+      - name: Smoke test ROOM load (Python / pya)
         env:
           COMMONDB_ROOT: ${{ env.GITHUB_WORKSPACE }}/CommonDB
           KLAYOUT: ${{ env.GITHUB_WORKSPACE }}/KLayout-roomdb/klayout-src/bin-release/klayout
@@ -61,7 +61,7 @@ jobs:
             echo "Skip smoke test: $ROOM_PATH not in CommonDB checkout"
             exit 0
           fi
-          "$KLAYOUT" -b -r "$GITHUB_WORKSPACE/KLayout-roomdb/scripts/test_room_load.rb"
+          "$KLAYOUT" -b -r "$GITHUB_WORKSPACE/KLayout-roomdb/scripts/test_room_load.py"
 
       - name: Install linuxdeployqt
         run: bash KLayout-roomdb/scripts/ci_install_linuxdeployqt.sh
@@ -118,7 +118,7 @@ jobs:
           sed -i 's/\r$//' KLayout-roomdb/scripts/ci_build_klayout_mroom.sh
           bash KLayout-roomdb/scripts/ci_build_klayout_mroom.sh "${{ github.workspace }}"
 
-      - name: Smoke test ROOM load
+      - name: Smoke test ROOM load (Python / pya)
         env:
           COMMONDB_ROOT: ${{ github.workspace }}/CommonDB
           KLAYOUT: ${{ github.workspace }}/KLayout-roomdb/klayout-src/bin-release/klayout
@@ -128,7 +128,7 @@ jobs:
             echo "Skip smoke test: $ROOM_PATH not in CommonDB checkout"
             exit 0
           fi
-          "$KLAYOUT" -b -r "${{ github.workspace }}/KLayout-roomdb/scripts/test_room_load.rb"
+          "$KLAYOUT" -b -r "${{ github.workspace }}/KLayout-roomdb/scripts/test_room_load.py"
 
       - name: Install linuxdeployqt
         run: bash KLayout-roomdb/scripts/ci_install_linuxdeployqt.sh

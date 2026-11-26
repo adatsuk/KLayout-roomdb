@@ -35,27 +35,52 @@ fi
 DEPLOY_LDPATH="${DEPLOY_LDPATH}:/usr/lib64:/lib64:/usr/lib/x86_64-linux-gnu"
 export LD_LIBRARY_PATH="${STAGE}/lib:${DEPLOY_LDPATH}"
 
+patch_plugin_rpath() {
+    local so="$1"
+    [[ -f "$so" ]] || return 0
+    command -v patchelf >/dev/null 2>&1 || return 0
+    patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$so" || true
+}
+
 if command -v patchelf >/dev/null 2>&1; then
-    patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins' "$STAGE/klayout" || true
-    if [[ -f "$STAGE/db_plugins/libmroom.so" ]]; then
-        patchelf --set-rpath '$ORIGIN:$ORIGIN/..:$ORIGIN/../lib' "$STAGE/db_plugins/libmroom.so" || true
-    fi
+    patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins:$ORIGIN/lay_plugins' "$STAGE/klayout" || true
+    patch_plugin_rpath "$STAGE/db_plugins/libmroom.so"
+    patch_plugin_rpath "$STAGE/lay_plugins/libmroom_ui.so"
 fi
 
 bundle_ldd() {
-    echo "Bundling Qt/runtime dependencies via ldd."
+    echo "Bundling Qt/runtime/Python dependencies via ldd."
     mkdir -p "$STAGE/lib"
     copy_deps() {
-        local bin="$1"
+        local bin="$1" include_system_python="${2:-0}"
+        local lib
         while IFS= read -r lib; do
             [[ -n "$lib" && -f "$lib" ]] || continue
+            # System libs stay on the host — except libpython, which Door macros need
+            # and which may be absent/mismatched on the install machine.
+            if [[ "$include_system_python" != "1" ]]; then
+                case "$lib" in
+                    /lib/*|/lib64/*|/usr/lib/*|/usr/lib64/*)
+                        case "$(basename "$lib")" in
+                            libpython*) ;;
+                            *) continue ;;
+                        esac
+                        ;;
+                esac
+            fi
             cp -Ln "$lib" "$STAGE/lib/" 2>/dev/null || cp -L "$lib" "$STAGE/lib/" || true
-        done < <(ldd "$bin" | awk '/=>/ {print $3}' | grep -vE '^/(lib|usr/lib)' || true)
+        done < <(ldd "$bin" 2>/dev/null | awk '/=>/ {print $3}' || true)
     }
     copy_deps "$STAGE/klayout"
-    if [[ -f "$STAGE/db_plugins/libmroom.so" ]]; then
-        copy_deps "$STAGE/db_plugins/libmroom.so"
-    fi
+    copy_deps "$STAGE/db_plugins/libmroom.so"
+    copy_deps "$STAGE/lay_plugins/libmroom_ui.so"
+    # Explicitly ship every libpython KLayout links (pya interpreter).
+    local py
+    while IFS= read -r py; do
+        [[ -n "$py" && -f "$py" ]] || continue
+        cp -Ln "$py" "$STAGE/lib/" 2>/dev/null || cp -L "$py" "$STAGE/lib/" || true
+        echo "Bundled Python: $(basename "$py")"
+    done < <(ldd "$STAGE/klayout" 2>/dev/null | awk '/libpython/ {print $3}' || true)
     QT_PLUGINS="$(qmake -query QT_INSTALL_PLUGINS 2>/dev/null || true)"
     if [[ -n "$QT_PLUGINS" && -d "$QT_PLUGINS" ]]; then
         cp -a "$QT_PLUGINS" "$STAGE/"
@@ -77,7 +102,9 @@ fi
 cp -a "$STAGE"/. "$DIST/"
 
 if command -v patchelf >/dev/null 2>&1; then
-    patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins' "$DIST/klayout" || true
+    patchelf --set-rpath '$ORIGIN:$ORIGIN/lib:$ORIGIN/db_plugins:$ORIGIN/lay_plugins' "$DIST/klayout" || true
+    patch_plugin_rpath "$DIST/db_plugins/libmroom.so"
+    patch_plugin_rpath "$DIST/lay_plugins/libmroom_ui.so"
 fi
 
 cat >"$DIST/klayout-run.sh" <<'EOF'
@@ -91,8 +118,17 @@ while [[ -L "$_src" ]]; do
   [[ "$_src" != /* ]] && _src="$_dir/$_src"
 done
 DIR="$(cd -P "$(dirname "$_src")" && pwd)"
-export LD_LIBRARY_PATH="$DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$DIR/lib:$DIR/db_plugins:$DIR/lay_plugins${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="$DIR/plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
+# Help pya find the bundled libpython when the host Python differs.
+if [[ -z "${PYTHONHOME:-}" ]]; then
+  for _py in "$DIR/lib"/libpython*.so*; do
+    if [[ -e "$_py" ]]; then
+      export LD_LIBRARY_PATH="$DIR/lib:$LD_LIBRARY_PATH"
+      break
+    fi
+  done
+fi
 cd "$DIR"
 exec "$DIR/klayout" "$@"
 EOF
@@ -106,6 +142,7 @@ Run: ./klayout-run.sh [file.layout.room]
 
 Requires: Linux x86_64 with glibc 2.28+ (RHEL 8 / Rocky Linux 8 / AlmaLinux 8).
 Includes mroom streamer for .room / *.layout.room files.
+Includes Python (pya) for Door macros (-rr).
 EOF
 
 rm -rf "$STAGE"

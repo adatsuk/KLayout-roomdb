@@ -13,6 +13,8 @@ apt-get install -y \
   automake \
   libtool \
   pkg-config \
+  python3 \
+  python3-dev \
   qtbase5-dev \
   qt5-qmake \
   qttools5-dev \

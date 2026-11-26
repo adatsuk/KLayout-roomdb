@@ -11,6 +11,7 @@ dnf install -y epel-release 2>/dev/null || true
 dnf install -y \
   gcc gcc-c++ make git which curl patchelf \
   autoconf automake libtool \
+  python3 python3-devel \
   qt5-qtbase-devel qt5-qtsvg-devel qt5-qttools-devel \
   qt5-qtmultimedia-devel qt5-qtxmlpatterns-devel \
   zlib-devel libpng-devel libcurl-devel expat-devel \

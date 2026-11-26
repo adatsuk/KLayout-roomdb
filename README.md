@@ -64,7 +64,7 @@ Layout views use `dbuPerMicron` in ROOM. LibMan expects `cell.layout.room` namin
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yaml`) builds on **Rocky Linux 8** and **Ubuntu 24.04**: checks out CommonDB, links `mroom`, runs `build.sh` (no Ruby/Python bindings), verifies `libmroom.so` and packages portable tarballs (`klayout-rocky8`, `klayout-linux-ubuntu24` artifacts).
+GitHub Actions (`.github/workflows/ci.yaml`) builds on **Rocky Linux 8** and **Ubuntu 24.04**: checks out CommonDB/Room, links `mroom`, runs `build.sh` (**Python/pya enabled** for Door macros; Ruby off), verifies `libmroom.so` and packages portable tarballs (`klayout-rocky8`, `klayout-linux-ubuntu24` artifacts) with bundled `libpython`.
 
 ## Upstream
 

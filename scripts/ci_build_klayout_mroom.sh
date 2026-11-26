@@ -27,7 +27,9 @@ bash "$ROOT/scripts/setup_klayout_mroom.sh" "$KLAYOUT"
 
 (
   cd "$KLAYOUT"
-  bash build.sh -build build-release -bin bin-release -noruby -nopython -nolibgit2 -option "-j${JOBS}"
+  # Door drives KLayout with Python macros (pya / -rr *.py). Keep -noruby to
+  # shrink the build, but Python bindings are required.
+  bash build.sh -build build-release -bin bin-release -noruby -nolibgit2 -option "-j${JOBS}"
 )
 
 bash "$ROOT/scripts/verify_klayout_mroom.sh" "$KLAYOUT"
