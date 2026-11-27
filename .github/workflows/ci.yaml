@@ -187,9 +187,10 @@ jobs:
           pacboy: >-
             cmake:p ninja:p gcc:p make:p
             qt5-base:p qt5-tools:p qt5-svg:p qt5-multimedia:p
+            qt5-xmlpatterns:p qt5-script:p
             python:p python-pip:p
             ruby:p
-            zlib:p
+            zlib:p libgit2:p
 
       - name: Build Cap'n Proto (Windows)
         shell: cmd
