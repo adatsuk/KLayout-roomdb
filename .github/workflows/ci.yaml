@@ -183,11 +183,13 @@ jobs:
           msystem: ucrt64
           update: true
           install: >-
-            git zip python
+            git zip
           pacboy: >-
             cmake:p ninja:p gcc:p make:p
             qt5-base:p qt5-tools:p qt5-svg:p qt5-multimedia:p
-            python-pip:p zlib:p
+            python:p python-pip:p
+            ruby:p
+            zlib:p
 
       - name: Build Cap'n Proto (Windows)
         shell: cmd
