@@ -153,3 +153,80 @@ jobs:
           path: KLayout-roomdb/klayout-ubuntu24.tar.gz
           if-no-files-found: error
           retention-days: 14
+
+  # Portable Windows zip (MSYS2 UCRT64 + deploy-win-mingw) for Door stack updater.
+  build-windows:
+    name: klayout + mroom (Windows portable)
+    runs-on: windows-2022
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout KLayout-roomdb
+        uses: actions/checkout@v4
+        with:
+          path: KLayout-roomdb
+          submodules: recursive
+
+      - name: Checkout ROOM
+        uses: actions/checkout@v4
+        with:
+          repository: IHP-GmbH/Room
+          path: CommonDB
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up MSYS2 (UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ucrt64
+          update: true
+          install: >-
+            git zip python
+          pacboy: >-
+            cmake:p ninja:p gcc:p make:p
+            qt5-base:p qt5-tools:p qt5-svg:p qt5-multimedia:p
+            python-pip:p zlib:p
+
+      - name: Build Cap'n Proto (Windows)
+        shell: cmd
+        run: |
+          set COMMONDB_ROOT=%GITHUB_WORKSPACE%\CommonDB
+          call CommonDB\scripts\build_capnp_windows.bat https://github.com/capnproto/capnproto.git branch master "" "" CommonDB\third_party\capnproto CommonDB\third_party\capnp-install
+          if not exist CommonDB\third_party\capnp-install\include\capnp\message.h (
+            echo Cap'n Proto headers missing after Windows bootstrap
+            exit /b 1
+          )
+
+      - name: Hook mroom + build/deploy portable (UCRT64)
+        run: |
+          set -euo pipefail
+          WS="$(cygpath -u "$GITHUB_WORKSPACE")"
+          export COMMONDB_ROOT="$WS/CommonDB"
+          export CAPNP_ROOT="$COMMONDB_ROOT/third_party/capnp-install"
+          ROOT="$WS/KLayout-roomdb"
+          KLAYOUT="$ROOT/klayout-src"
+          sed -i 's/\r$//' "$ROOT/scripts/"*.sh "$KLAYOUT/build.sh" "$KLAYOUT/scripts/deploy-win-mingw.sh" || true
+          bash "$ROOT/scripts/regenerate_klayout_capnp.sh"
+          bash "$ROOT/scripts/setup_klayout_mroom.sh" "$KLAYOUT"
+          # Builds into bin-release-win64-ucrt and copies Qt/MSYS runtime DLLs.
+          (cd "$KLAYOUT" && bash scripts/deploy-win-mingw.sh -ucrt -qt5)
+          TARGET="$(echo "$KLAYOUT"/bin-release-win64-ucrt*)"
+          test -x "$TARGET/klayout.exe"
+          {
+            echo "flavor=windows"
+            echo "created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "source=klayout-windows"
+          } > "$TARGET/BUNDLE_SOURCE.txt"
+          mkdir -p "$ROOT/portable"
+          (cd "$TARGET" && zip -r -q ../../portable/klayout-windows.zip .)
+          ls -la "$ROOT/portable/klayout-windows.zip"
+
+      - name: Upload Windows portable bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: klayout-windows
+          path: KLayout-roomdb/portable/klayout-windows.zip
+          if-no-files-found: error
+          retention-days: 14
