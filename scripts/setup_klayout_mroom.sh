@@ -30,13 +30,38 @@ mkdir -p "$STREAMERS"
 if [[ -L "$LINK" ]] || [[ -e "$LINK" ]]; then
   rm -rf "$LINK"
 fi
-ln -s "$MROOM" "$LINK"
 
-mkdir -p "$MROOM/db_plugin"
-cat > "$MROOM/db_plugin/local.pri" <<EOF
+# Windows/MinGW qmake does not follow MSYS symlinks for exists()/$$PWD, so
+# local.pri and room.pri would look missing. Use a real copy on MSYS/MINGW.
+_is_windows=0
+case "$(uname -s 2>/dev/null || true)" in
+  MINGW*|MSYS*|CYGWIN*) _is_windows=1 ;;
+esac
+if [[ -n "${MSYSTEM:-}" ]]; then
+  _is_windows=1
+fi
+
+if [[ "$_is_windows" -eq 1 ]]; then
+  cp -a "$MROOM" "$LINK"
+  _pri_dir="$LINK/db_plugin"
+  if command -v cygpath >/dev/null 2>&1; then
+    COMMONDB="$(cygpath -m "$COMMONDB")"
+    KLAYOUT="$(cygpath -m "$KLAYOUT")"
+  fi
+else
+  ln -s "$MROOM" "$LINK"
+  _pri_dir="$MROOM/db_plugin"
+fi
+
+mkdir -p "$_pri_dir" "$MROOM/db_plugin"
+_pri_body=$(cat <<EOF
 COMMONDB_ROOT = $COMMONDB
 KLAYOUT_SRC = $KLAYOUT/src
 EOF
+)
+printf '%s\n' "$_pri_body" > "$_pri_dir/local.pri"
+# Keep the source tree copy in sync for non-Windows / editors.
+printf '%s\n' "$_pri_body" > "$MROOM/db_plugin/local.pri"
 
 # Keep mroom out of auto-discovery so SUBDIRS lists it once, after lstream.
 STREAMERS_PRO="$STREAMERS/streamers.pro"

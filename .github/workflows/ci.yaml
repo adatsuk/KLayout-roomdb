@@ -183,7 +183,7 @@ jobs:
           msystem: ucrt64
           update: true
           install: >-
-            git zip
+            git zip make
           pacboy: >-
             cmake:p ninja:p gcc:p make:p
             qt5-base:p qt5-tools:p qt5-svg:p qt5-multimedia:p
@@ -208,11 +208,19 @@ jobs:
           WS="$(cygpath -u "$GITHUB_WORKSPACE")"
           export COMMONDB_ROOT="$WS/CommonDB"
           export CAPNP_ROOT="$COMMONDB_ROOT/third_party/capnp-install"
+          # build.sh calls `make`; mingw package is mingw32-make — ensure both exist.
+          export PATH="/ucrt64/bin:/usr/bin:$PATH"
+          if ! command -v make >/dev/null 2>&1 && command -v mingw32-make >/dev/null 2>&1; then
+            mkdir -p "$HOME/bin"
+            ln -sf "$(command -v mingw32-make)" "$HOME/bin/make"
+            export PATH="$HOME/bin:$PATH"
+          fi
           ROOT="$WS/KLayout-roomdb"
           KLAYOUT="$ROOT/klayout-src"
           sed -i 's/\r$//' "$ROOT/scripts/"*.sh "$KLAYOUT/build.sh" "$KLAYOUT/scripts/deploy-win-mingw.sh" || true
           bash "$ROOT/scripts/regenerate_klayout_capnp.sh"
           bash "$ROOT/scripts/setup_klayout_mroom.sh" "$KLAYOUT"
+          test -f "$KLAYOUT/src/plugins/streamers/mroom/db_plugin/local.pri"
           # Builds into bin-release-win64-ucrt and copies Qt/MSYS runtime DLLs.
           (cd "$KLAYOUT" && bash scripts/deploy-win-mingw.sh -ucrt -qt5)
           TARGET="$(echo "$KLAYOUT"/bin-release-win64-ucrt*)"
